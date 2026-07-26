@@ -1,0 +1,338 @@
+"""AI chatbot logic. Key upgrades over the previous version:
+1. Real semantic search over the Knowledge Base using embeddings — only the
+   most relevant 3-4 articles are sent per query, not all 18 every time.
+   This is genuine "AI semantic search" (matches the FRD requirement),
+   not just static context-stuffing, and it's also faster.
+2. Handles MULTIPLE tool calls in a single AI turn (e.g. "create a ticket
+   AND tell me my other tickets" now actually does both).
+3. Explicit rules for emotional tone, ambiguity, and not inventing tickets
+   for simple lookup requests.
+4. Honest error messaging that distinguishes rate-limiting from other
+   failures, instead of one vague fallback for everything.
+"""
+import math
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.tools import StructuredTool
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from app.config import GEMINI_API_KEY
+from app.kb_data import KB_ARTICLES
+from app.models import Ticket
+from app.sla_utils import assign_sla_deadline
+from app.team_utils import assign_team, assign_agent
+
+embeddings_model = GoogleGenerativeAIEmbeddings(
+    model="models/gemini-embedding-001",
+    google_api_key=GEMINI_API_KEY,
+)
+
+_kb_texts = [f"{a['title']}: {a['content']}" for a in KB_ARTICLES]
+try:
+    _kb_embeddings = embeddings_model.embed_documents(_kb_texts)
+except Exception as e:
+    print(f"Warning: could not precompute KB embeddings at startup: {e}")
+    _kb_embeddings = []
+
+
+def _cosine_similarity(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    mag_a = math.sqrt(sum(x * x for x in a))
+    mag_b = math.sqrt(sum(y * y for y in b))
+    if mag_a == 0 or mag_b == 0:
+        return 0.0
+    return dot / (mag_a * mag_b)
+
+
+def get_relevant_kb_articles(query: str, top_k: int = 4) -> str:
+    if not _kb_embeddings:
+        return "\n\n".join(f"[{a['category']}] {a['title']}\n{a['content']}" for a in KB_ARTICLES)
+
+    try:
+        query_embedding = embeddings_model.embed_query(query)
+        scored = [
+            (_cosine_similarity(query_embedding, kb_emb), i)
+            for i, kb_emb in enumerate(_kb_embeddings)
+        ]
+        scored.sort(reverse=True)
+        top_articles = [KB_ARTICLES[i] for _, i in scored[:top_k]]
+        return "\n\n".join(f"[{a['category']}] {a['title']}\n{a['content']}" for a in top_articles)
+    except Exception as e:
+        print(f"Semantic search error, falling back to full KB: {e}")
+        return "\n\n".join(f"[{a['category']}] {a['title']}\n{a['content']}" for a in KB_ARTICLES)
+
+
+SYSTEM_PROMPT = """You are the SupportX customer support assistant for TechServe Solutions,
+a B2B SaaS company providing project and workflow management software.
+
+The most relevant Knowledge Base articles for this customer's message are:
+
+{kb}
+
+You have three tools available:
+- check_ticket_status: use when the customer asks about ONE specific existing
+  ticket (e.g. "status of ticket #4").
+- list_my_tickets: use when the customer asks to see/list ALL their tickets
+  (e.g. "what tickets do I have"). NEVER create a new ticket just to answer
+  this kind of request — always use this tool instead.
+- create_support_ticket: use ONLY when the customer describes a genuinely
+  NEW issue not covered by the KB above. Do not use this tool for requests
+  to view, list, or check existing data.
+
+Rules:
+1. If a KB article directly answers a NEW issue, answer it yourself in plain
+   text — no tool needed.
+2. If the customer's message contains multiple distinct requests (e.g.
+   "create a ticket for X and also show me my tickets"), address ALL of
+   them — call multiple tools if needed, don't silently do only one.
+3. If a message is too vague to act on ("it's broken", "idk what's wrong"),
+   ask ONE short clarifying question rather than guessing or creating a
+   ticket immediately.
+4. If the customer refers vaguely to "that ticket" or "the issue" and more
+   than one ticket could reasonably match, briefly ask which one they mean
+   rather than picking one silently.
+4b. IMPORTANT: Only ask for a ticket number if the customer's message or
+    recent history clearly references an EXISTING ticket. If the customer
+    is describing a problem for the first time (even if it happened days
+    ago, like "I cancelled 10 days ago and never got my refund"), treat it
+    as a NEW issue — do not assume a ticket already exists. Either answer
+    from the KB, or call create_support_ticket. Never ask "what's your
+    ticket number" for a problem being described for the first time.
+5. If the customer expresses frustration, anger, or strong dissatisfaction,
+   acknowledge it briefly and genuinely (e.g. "I understand that's
+   frustrating, I'm sorry") before helping or escalating — do not just
+   jump straight to a solution as if nothing was said.
+6. CRITICAL: Never say a ticket "has been created" or "I've logged this"
+   in your reply text UNLESS you are actually calling the
+   create_support_ticket tool in this same turn. Your reply text and your
+   actual tool calls must always match — if you say a ticket was created,
+   you MUST have called the tool. If you are unsure whether something
+   needs a ticket, call create_support_ticket rather than just describing
+   it in words. Requests like "delete my account", "cancel my
+   subscription", or any account-changing action you have no tool for
+   ALWAYS require calling create_support_ticket — never just describe
+   creating one without actually doing it.
+7. Keep answers focused — don't dump unrelated topics when asked a vague
+   follow-up like "any other tips"; ask what they're interested in instead.
+8. Never reveal internal ticket priority levels to the customer directly.
+"""
+
+
+class CheckTicketStatusInput(BaseModel):
+    ticket_id: int = Field(description="The ticket ID number the customer is asking about")
+
+
+class CreateTicketInput(BaseModel):
+    subject: str = Field(description="Short 5-8 word summary of the issue")
+    description: str = Field(description="Full description of the customer's issue")
+    priority: str = Field(description="One of: P1, P2, P3, P4")
+
+
+def _build_tools(customer_id: int, db: Session):
+    def check_ticket_status(ticket_id: int) -> str:
+        ticket = db.query(Ticket).filter(
+            Ticket.id == ticket_id, Ticket.customer_id == customer_id
+        ).first()
+        if not ticket:
+            return f"No ticket #{ticket_id} found for this customer."
+        return (
+            f"Ticket #{ticket.id}: '{ticket.subject}'. "
+            f"Status: {ticket.status.value}. "
+            f"Created: {ticket.created_at.strftime('%Y-%m-%d %H:%M')}. "
+            f"{'Resolved at: ' + ticket.resolved_at.strftime('%Y-%m-%d %H:%M') if ticket.resolved_at else 'Not yet resolved.'}"
+        )
+
+    def list_my_tickets() -> str:
+        tickets = db.query(Ticket).filter(Ticket.customer_id == customer_id).order_by(Ticket.created_at.desc()).all()
+        if not tickets:
+            return "You don't have any tickets yet."
+        lines = [f"#{t.id}: '{t.subject}' — {t.status.value}" for t in tickets]
+        return "Your tickets:\n" + "\n".join(lines)
+
+    def create_support_ticket(subject: str, description: str, priority: str) -> str:
+        if priority not in ["P1", "P2", "P3", "P4"]:
+            priority = "P3"
+        team_id = assign_team(db)
+        ticket = Ticket(
+            subject=subject,
+            description=description,
+            customer_id=customer_id,
+            priority=priority,
+            team_id=team_id,
+            agent_id=assign_agent(db, team_id),
+        )
+        db.add(ticket)
+        db.flush()
+        assign_sla_deadline(ticket, db)
+        db.commit()
+        db.refresh(ticket)
+        return f"TICKET_CREATED:{ticket.id}:Created ticket #{ticket.id}. An agent will follow up shortly."
+
+    status_tool = StructuredTool.from_function(
+        func=check_ticket_status,
+        name="check_ticket_status",
+        description="Look up the live status of ONE specific existing ticket belonging to this customer.",
+        args_schema=CheckTicketStatusInput,
+    )
+    list_tool = StructuredTool.from_function(
+        func=list_my_tickets,
+        name="list_my_tickets",
+        description="List ALL tickets belonging to this customer.",
+    )
+    create_tool = StructuredTool.from_function(
+        func=create_support_ticket,
+        name="create_support_ticket",
+        description="Create a new support ticket for a genuinely new issue not covered by the KB.",
+        args_schema=CreateTicketInput,
+    )
+    return [status_tool, list_tool, create_tool]
+
+
+llm = ChatGoogleGenerativeAI(
+    model="gemini-3.1-flash-lite",
+    google_api_key=GEMINI_API_KEY,
+    temperature=0.3,
+    max_output_tokens=300,
+)
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", SYSTEM_PROMPT),
+    MessagesPlaceholder(variable_name="history"),
+    ("human", "{message}"),
+])
+
+
+def _history_to_messages(history: list[dict]) -> list:
+    messages = []
+    for turn in (history or [])[-6:]:
+        if turn.get("role") == "user":
+            messages.append(HumanMessage(content=turn["text"]))
+        elif turn.get("role") == "bot" and not turn.get("pending"):
+            messages.append(AIMessage(content=turn["text"]))
+    return messages
+
+
+def _extract_text(content) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict) and "text" in block:
+                parts.append(block["text"])
+            elif isinstance(block, str):
+                parts.append(block)
+        return "".join(parts)
+    return str(content)
+
+
+def _friendly_error_message(e: Exception) -> str:
+    error_text = str(e)
+    if "429" in error_text or "quota" in error_text.lower() or "rate" in error_text.lower():
+        return ("I'm getting a lot of requests right now and have hit a temporary rate limit. "
+                "Please wait about a minute and try again.")
+    return "Something went wrong on my end processing that — please try again in a moment."
+
+
+def get_chatbot_response(customer_message: str, customer_id: int, db: Session, history: list[dict] = None) -> dict:
+    history = history or []
+    tools = _build_tools(customer_id, db)
+    llm_with_tools = llm.bind_tools(tools)
+    chain = prompt | llm_with_tools
+
+    try:
+        relevant_kb = get_relevant_kb_articles(customer_message)
+        response = chain.invoke({
+            "kb": relevant_kb,
+            "history": _history_to_messages(history),
+            "message": customer_message,
+        })
+
+        if response.tool_calls:
+            reply_parts = []
+            ticket_id = None
+            resolved = True
+
+            for tool_call in response.tool_calls:
+                tool_name = tool_call["name"]
+                tool_args = tool_call["args"]
+                matching_tool = next((t for t in tools if t.name == tool_name), None)
+                if not matching_tool:
+                    continue
+                result = matching_tool.func(**tool_args)
+
+                if tool_name == "create_support_ticket":
+                    _, tid_str, human_text = result.split(":", 2)
+                    ticket_id = int(tid_str)
+                    resolved = False
+                    reply_parts.append(human_text.strip())
+                else:
+                    reply_parts.append(result)
+
+            return {"resolved": resolved, "reply": "\n\n".join(reply_parts), "ticket_id": ticket_id}
+
+        return {"resolved": True, "reply": _extract_text(response.content), "ticket_id": None}
+
+    except Exception as e:
+        print(f"Chatbot error: {e}")
+        return {"resolved": False, "reply": _friendly_error_message(e), "ticket_id": None}
+
+
+def classify_ticket_priority(subject: str, description: str) -> str:
+    classify_prompt = ChatPromptTemplate.from_template(
+        """Classify this support ticket's priority for TechServe Solutions.
+P1=critical/account inaccessible/security, P2=high/major feature broken/billing dispute,
+P3=medium/minor bug, P4=low/feature request.
+
+Subject: {subject}
+Description: {description}
+
+Respond with ONLY one word: P1, P2, P3, or P4."""
+    )
+    try:
+        result = (classify_prompt | llm).invoke({"subject": subject, "description": description})
+        text = _extract_text(result.content).strip()
+        return text if text in ["P1", "P2", "P3", "P4"] else "P3"
+    except Exception as e:
+        print(f"Classification error: {e}")
+        return "P3"
+
+def suggest_agent_response(ticket_subject: str, ticket_description: str) -> str:
+    """Generates a DRAFT response an Agent can review, edit, and send to
+    the customer — the agent stays in control, this just saves them from
+    starting with a blank page. Uses the same semantic KB search as the
+    customer chatbot, so suggestions are grounded in real KB content."""
+    relevant_kb = get_relevant_kb_articles(f"{ticket_subject} {ticket_description}")
+
+    suggest_prompt = ChatPromptTemplate.from_template(
+        """Draft a short reply for a Support Agent to send inside an existing
+support ticket thread. The customer already opened this ticket — this is
+NOT a first-contact email.
+
+STRICT RULES:
+- NO "Subject:" line
+- NO greeting like "Hello" or "Dear Customer"
+- NO sign-off like "Best regards" or "[Agent Name]"
+- Maximum 3 sentences, OR a maximum 3-item bullet list if steps are needed
+- Get straight to the point — no restating the problem back at length
+
+Relevant Knowledge Base info:
+{kb}
+
+Ticket subject: {subject}
+Ticket description: {description}
+
+Output ONLY the short reply text, nothing else."""
+    )
+    try:
+        result = (suggest_prompt | llm).invoke({
+            "kb": relevant_kb,
+            "subject": ticket_subject,
+            "description": ticket_description,
+        })
+        return _extract_text(result.content).strip()
+    except Exception as e:
+        print(f"Suggestion error: {e}")
+        return "Could not generate a suggestion right now — please write a response manually."

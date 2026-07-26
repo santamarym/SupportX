@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SupportX</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; background: #F7F8FA; }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .accent { color: #0D9488; }
+  .bg-accent { background-color: #0D9488; }
+  .border-accent { border-color: #0D9488; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+  @keyframes chatFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-2 mb-2">
+        <div class="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
+          <span class="text-white font-display font-bold text-lg">X</span>
+        </div>
+        <span class="font-display font-bold text-2xl text-slate-800">SupportX</span>
+      </div>
+      <p class="text-slate-500 text-sm">AI Customer Support Automation Platform</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-7">
+      <h1 class="font-display font-semibold text-lg text-slate-800 mb-5">Sign in to your account</h1>
+
+      <div id="loginError" class="hidden mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+          <input type="email" id="loginEmail" required placeholder="you@supportx.com"
+            class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••"
+            class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600">
+        </div>
+        <button type="submit"
+          class="w-full bg-accent hover:bg-teal-700 text-white font-medium text-sm py-2.5 rounded-lg transition">
+          Sign in
+        </button>
+        <button type="button" onclick="showForgotPassword()"
+          class="w-full text-center text-xs text-slate-500 hover:accent transition pt-1">
+          Forgot password?
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FORGOT PASSWORD SCREEN ============ -->
+<div id="forgotScreen" class="hidden min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-7">
+
+      <!-- Step 1: request reset -->
+      <div id="forgotStep1">
+        <h1 class="font-display font-semibold text-lg text-slate-800 mb-1.5">Reset your password</h1>
+        <p class="text-sm text-slate-500 mb-5">Enter your account email and we'll email you a reset code.</p>
+        <div id="forgotError" class="hidden mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        <form id="forgotForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+            <input type="email" id="forgotEmail" required placeholder="you@supportx.com"
+              class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600">
+          </div>
+          <button type="submit"
+            class="w-full bg-accent hover:bg-teal-700 text-white font-medium text-sm py-2.5 rounded-lg transition">
+            Send reset code
+          </button>
+          <button type="button" onclick="backToLogin()"
+            class="w-full text-center text-xs text-slate-500 hover:accent transition">
+            Back to sign in
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 2: enter reset code emailed to the user + new password -->
+      <div id="forgotStep2" class="hidden">
+        <h1 class="font-display font-semibold text-lg text-slate-800 mb-1.5">Check your inbox</h1>
+        <p class="text-sm text-slate-500 mb-4">
+          We've emailed a reset code to your address. Enter it below along with your new password.
+        </p>
+
+        <div id="resetError" class="hidden mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        <form id="resetForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Reset code</label>
+            <input type="text" id="resetTokenInput" required placeholder="Paste the code from your email"
+              class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">New password</label>
+            <input type="password" id="newPassword" required placeholder="••••••••"
+              class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600">
+          </div>
+          <button type="submit"
+            class="w-full bg-accent hover:bg-teal-700 text-white font-medium text-sm py-2.5 rounded-lg transition">
+            Set new password
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 3: success -->
+      <div id="forgotStep3" class="hidden text-center py-2">
+        <p class="text-sm text-slate-700 mb-4">✅ Password updated. You can sign in with your new password now.</p>
+        <button onclick="backToLogin()"
+          class="w-full bg-accent hover:bg-teal-700 text-white font-medium text-sm py-2.5 rounded-lg transition">
+          Back to sign in
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL (shown after login) ============ -->
+<div id="appShell" class="hidden h-screen flex overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-60 bg-slate-900 text-slate-300 flex flex-col shrink-0">
+    <div class="px-5 py-5 flex items-center gap-2 border-b border-slate-800">
+      <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+        <span class="text-white font-display font-bold text-sm">X</span>
+      </div>
+      <span class="font-display font-semibold text-white">SupportX</span>
+    </div>
+
+    <nav id="navLinks" class="flex-1 px-3 py-4 space-y-1 text-sm"></nav>
+
+    <div class="px-4 py-4 border-t border-slate-800">
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-semibold text-white" id="userInitial"></div>
+        <div class="min-w-0 flex-1">
+          <p id="userName" class="text-sm font-medium text-white truncate"></p>
+          <p id="userRoleLabel" class="text-xs text-slate-400 capitalize"></p>
+        </div>
+        <button onclick="toggleNotifications()" class="relative text-slate-400 hover:text-white p-1">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+  </svg>
+  <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">0</span>
+</button>
+      </div>
+      <div id="notifPanel" class="hidden bg-slate-800 rounded-lg p-2 mb-3 max-h-40 overflow-y-auto text-xs text-slate-300 space-y-1"></div>
+      <button onclick="logout()" class="w-full text-left text-xs text-slate-400 hover:text-white transition">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-y-auto h-screen">
+    <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+      <h1 id="pageTitle" class="font-display font-semibold text-xl text-slate-800"></h1>
+      <span id="roleBadge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-teal-50 accent border border-teal-200"></span>
+    </header>
+    <div id="pageContent" class="p-8"></div>
+  </main>
+</div>
+
+<!-- ============ FLOATING CHAT BUTTON (Customer only) ============ -->
+<div id="chatBubbleWrap" class="hidden fixed bottom-6 right-6 z-40">
+  <button id="chatBubble" onclick="toggleChatPopup()" class="w-14 h-14 rounded-full bg-accent hover:bg-teal-700 text-white shadow-lg flex items-center justify-center text-2xl transition" style="animation: chatFloat 2.5s ease-in-out infinite;">
+    💬
+  </button>
+</div>
+
+<div id="chatPopup" class="hidden fixed bottom-24 right-6 w-80 max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-50" style="height: 440px;">
+  <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-slate-900 rounded-t-2xl">
+    <span class="text-white text-sm font-semibold">SupportX AI</span>
+    <button onclick="toggleChatPopup()" class="text-slate-300 hover:text-white text-lg leading-none">✕</button>
+  </div>
+  <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-2.5"></div>
+  <div class="border-t border-slate-200 p-2.5">
+    <div id="chatError" class="hidden mb-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5"></div>
+    <form id="chatForm" class="flex gap-2">
+      <input type="text" id="chatInput" required placeholder="Describe your issue..."
+        class="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600">
+      <button type="submit" class="bg-accent hover:bg-teal-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition">Send</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const API_BASE = "http://127.0.0.1:8000";
+let currentUser = null; // { access_token, role, name }
+
+// ---------- Login ----------
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const errBox = document.getElementById('loginError');
+  errBox.classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || 'Login failed');
+    }
+    const data = await res.json();
+    currentUser = data;
+    enterApp();
+  } catch (err) {
+    errBox.textContent = err.message === 'Failed to fetch'
+      ? 'Cannot reach the backend. Is uvicorn running at http://127.0.0.1:8000?'
+      : err.message;
+    errBox.classList.remove('hidden');
+  }
+});
+
+// ---------- Forgot / reset password ----------
+function showForgotPassword() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('forgotScreen').classList.remove('hidden');
+  document.getElementById('forgotStep1').classList.remove('hidden');
+  document.getElementById('forgotStep2').classList.add('hidden');
+  document.getElementById('forgotStep3').classList.add('hidden');
+  document.getElementById('forgotError').classList.add('hidden');
+  document.getElementById('forgotForm').reset();
+}
+
+function backToLogin() {
+  document.getElementById('forgotScreen').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('forgotEmail').value;
+  const errBox = document.getElementById('forgotError');
+  errBox.classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || 'Something went wrong');
+    }
+    document.getElementById('forgotStep1').classList.add('hidden');
+    document.getElementById('forgotStep2').classList.remove('hidden');
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove('hidden');
+  }
+});
+
+document.getElementById('resetForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const token = document.getElementById('resetTokenInput').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const errBox = document.getElementById('resetError');
+  errBox.classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password: newPassword })
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || 'Reset failed');
+    }
+    document.getElementById('forgotStep2').classList.add('hidden');
+    document.getElementById('forgotStep3').classList.remove('hidden');
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove('hidden');
+  }
+});
+
+function logout() {
+  currentUser = null;
+  chatHistory = [];
+  document.getElementById('chatPopup').classList.add('hidden');
+  document.getElementById('chatBubbleWrap').classList.add('hidden');
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginForm').reset();
+}
+
+// ---------- Role-based nav + page config ----------
+const ROLE_CONFIG = {
+  customer: {
+    label: 'Customer',
+    nav: [
+      { id: 'tickets', label: '🎫 My Tickets', title: 'My Tickets' },
+    ]
+  },
+  agent: {
+    label: 'Support Agent',
+    nav: [
+      { id: 'queue', label: '🎫 My Queue', title: 'My Ticket Queue' },
+      { id: 'kb', label: '📚 Knowledge Base', title: 'Knowledge Base' },
+    ]
+  },
+  team_lead: {
+    label: 'Team Lead',
+    nav: [
+      { id: 'dashboard', label: '📊 Dashboard', title: 'Team Dashboard' },
+      { id: 'escalations', label: '🚨 Escalations', title: 'Escalations' },
+      { id: 'team_tickets', label: '🎫 Team Tickets', title: 'Team Tickets' },
+      { id: 'transfers', label: '🔄 Transfer Requests', title: 'Incoming Transfer Requests' },
+      { id: 'sent_transfers', label: '📤 Sent Requests', title: 'My Sent Transfer Requests' },
+    ]
+  },
+
+  admin: {
+    label: 'Admin',
+    nav: [
+      { id: 'dashboard', label: '📊 Dashboard', title: 'Admin Dashboard' },
+      { id: 'all_tickets', label: '🎫 All Tickets', title: 'All Tickets (Team 1 & 2)' },
+      { id: 'users', label: '👤 User Management', title: 'User Management' },
+      { id: 'sla', label: '⏱️ SLA Rules', title: 'SLA Configuration' },
+      { id: 'mass_email', label: '📢 Notify Customers', title: 'Send Incident Notification' },
+    ]
+  }
+};
+
+async function checkNotifications() {
+  try {
+    const data = await apiGet('/tickets/notifications');
+    const badge = document.getElementById('notifBadge');
+    if (data.count > 0) {
+      badge.textContent = data.count;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+    window._notifications = data.notifications;
+  } catch {
+    // Silently ignore — notifications aren't critical path
+  }
+}
+
+async function toggleNotifications() {
+  const panel = document.getElementById('notifPanel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) {
+    const notifs = window._notifications || [];
+    panel.innerHTML = notifs.length
+      ? notifs.map(n => `<div class="px-2 py-1 hover:bg-slate-700 rounded">${escapeHtml(n.text)}</div>`).join('')
+      : `<div class="px-2 py-1 text-slate-500">No new notifications.</div>`;
+
+    if (currentUser.role === 'customer' && notifs.length > 0) {
+      try {
+        await apiPost('/tickets/notifications/mark-seen', {});
+        document.getElementById('notifBadge').classList.add('hidden');
+      } catch (err) {
+        console.error('Mark-seen failed:', err.message);
+      }
+    }
+  }
+}
+
+function enterApp() {
+  chatHistory = [];
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appShell').classList.remove('hidden');
+
+  const cfg = ROLE_CONFIG[currentUser.role];
+  document.getElementById('userName').textContent = currentUser.name;
+  document.getElementById('userInitial').textContent = currentUser.name.charAt(0).toUpperCase();
+  document.getElementById('userRoleLabel').textContent = cfg.label;
+  document.getElementById('roleBadge').textContent = cfg.label;
+
+  const nav = document.getElementById('navLinks');
+  nav.innerHTML = '';
+  cfg.nav.forEach((item, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 transition flex items-center gap-2';
+    btn.textContent = item.label;
+    btn.onclick = () => showPage(item.id, item.title);
+    nav.appendChild(btn);
+  });
+
+  showPage(cfg.nav[0].id, cfg.nav[0].title);
+  checkNotifications();
+
+  if (currentUser.role === 'customer') {
+    document.getElementById('chatBubbleWrap').classList.remove('hidden');
+  } else {
+    document.getElementById('chatBubbleWrap').classList.add('hidden');
+  }
+}
+
+// ---------- Page content per role ----------
+const DOM_RENDER_PAGES = new Set(['tickets', 'queue', 'team_tickets','escalations','kb','transfers','sent_transfers','dashboard','all_tickets','sla','users','mass_email']);
+
+function showPage(pageId, title) {
+  document.getElementById('pageTitle').textContent = title;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-slate-800', 'text-white'));
+  event?.target?.classList.add('bg-slate-800', 'text-white');
+  checkNotifications();
+
+  const content = document.getElementById('pageContent');
+  const template = PAGE_TEMPLATES[pageId];
+
+  if (!template) {
+    content.innerHTML = emptyState(title);
+  } else if (DOM_RENDER_PAGES.has(pageId)) {
+    template();
+  } else {
+    content.innerHTML = template();
+  }
+}
+
+function emptyState(title) {
+  return `<div class="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400">
+    <p class="text-sm">Nothing to show here yet.</p>
+  </div>`;
+}
+
+function card(inner) {
+  return `<div class="bg-white rounded-xl border border-slate-200 p-6">${inner}</div>`;
+}
+
+const PAGE_TEMPLATES = {
+  tickets: renderCustomerTickets,
+  queue: renderAgentQueue,
+  kb: renderKnowledgeBase,
+  overview: () => card(`<p class="text-sm text-slate-500">Team performance and SLA compliance at a glance.</p>`),
+  escalations: renderEscalations,
+  team_tickets: renderTeamTickets,
+  transfers: renderTransferRequests,
+  sent_transfers: renderSentTransfers,
+  dashboard: renderDashboard,
+  all_tickets: renderAllTickets,
+  users: renderUserManagement,
+  sla: renderSlaRules,
+  mass_email: renderMassEmail,
+};
+
+// ---------- Customer: Chat with SupportX ----------
+let chatHistory = [];
+
+function toggleChatPopup() {
+  const popup = document.getElementById('chatPopup');
+  const isHidden = popup.classList.contains('hidden');
+  popup.classList.toggle('hidden');
+  if (isHidden) {
+    renderChatMessages();
+    if (!window._chatFormBound) {
+      document.getElementById('chatForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        if (!message) return;
+        const errBox = document.getElementById('chatError');
+        errBox.classList.add('hidden');
+
+        const historyToSend = chatHistory.filter(m => !m.pending);
+        chatHistory.push({ role: 'user', text: message });
+        input.value = '';
+        renderChatMessages();
+
+        chatHistory.push({ role: 'bot', text: '...', pending: true });
+        renderChatMessages();
+
+        try {
+          const res = await apiPost('/chat/message', { message, history: historyToSend });
+          chatHistory.pop();
+          chatHistory.push({
+            role: 'bot',
+            text: res.reply,
+            ticketId: res.ticket_id,
+            resolved: res.resolved
+          });
+        } catch (err) {
+          chatHistory.pop();
+          errBox.textContent = err.message;
+          errBox.classList.remove('hidden');
+        }
+        renderChatMessages();
+      });
+      window._chatFormBound = true;
+    }
+  }
+}
+
+function renderChatMessages() {
+  const box = document.getElementById('chatMessages');
+  if (!box) return;
+
+  if (chatHistory.length === 0) {
+    box.innerHTML = `<p class="text-sm text-slate-400 text-center py-8">Describe your issue below and SupportX will try to help right away.</p>`;
+    return;
+  }
+
+  box.innerHTML = chatHistory.map(m => {
+    if (m.role === 'user') {
+      return `<div class="flex justify-end">
+        <div class="bg-accent text-white text-sm rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[75%]">${escapeHtml(m.text)}</div>
+      </div>`;
+    }
+    const ticketNote = m.ticketId
+      ? `<p class="text-xs text-slate-400 mt-1.5">🎫 Ticket #${m.ticketId} created — an agent will follow up.</p>`
+      : (m.resolved ? `<p class="text-xs text-green-600 mt-1.5">✓ Resolved</p>` : '');
+    return `<div class="flex justify-start">
+      <div>
+        <div class="bg-slate-100 text-slate-800 text-sm rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[75%]">${formatBotText(m.text)}</div>
+        ${ticketNote}
+      </div>
+    </div>`;
+  }).join('');
+
+  box.scrollTop = box.scrollHeight;
+}
+
+// ---------- Ticket helpers ----------
+async function apiGet(path) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${currentUser.access_token}` }
+  });
+  if (!res.ok) throw new Error('Request failed');
+  return res.json();
+}
+
+async function apiPost(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.access_token}` },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || 'Request failed');
+  return res.json();
+}
+
+async function apiPatch(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.access_token}` },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error((await res.json()).detail || 'Request failed');
+  return res.json();
+}
+
+const STATUS_STYLES = {
+  open: 'bg-blue-50 text-blue-700 border-blue-200',
+  in_progress: 'bg-amber-50 text-amber-700 border-amber-200',
+  escalated: 'bg-red-50 text-red-700 border-red-200',
+  resolved: 'bg-green-50 text-green-700 border-green-200',
+};
+
+function slaBadge(t) {
+  if (t.status === 'resolved' || !t.sla_deadline) return '';
+  // Backend sends UTC timestamps without a timezone marker — explicitly
+  // append 'Z' so the browser parses it as UTC, not local time (IST),
+  // which otherwise shifts the apparent deadline by 5.5 hours.
+  const isoString = t.sla_deadline.endsWith('Z') ? t.sla_deadline : t.sla_deadline + 'Z';
+  const deadline = new Date(isoString);
+  const now = new Date();
+  if (now > deadline) {
+    return `<span class="text-xs font-medium text-red-600 mt-0.5 block">⚠ SLA breached</span>`;
+  }
+  const hoursLeft = Math.round((deadline - now) / (1000 * 60 * 60));
+  return `<span class="text-xs text-slate-400 mt-0.5 block">SLA: ${hoursLeft}h remaining</span>`;
+}
+
+function ticketRow(t, showCustomer, internal = true) {
+  const statusClass = STATUS_STYLES[t.status] || STATUS_STYLES.open;
+  const internalDetails = internal
+    ? ` · ${t.priority}${showCustomer ? ' · Customer #' + t.customer_id : ''}`
+    : '';
+  let replyBlock = '';
+  if (!internal && t.agent_reply) {
+    replyBlock = `<div class="mt-2 p-2.5 bg-teal-50 border border-teal-200 rounded-lg text-sm text-slate-700"><span class="font-medium text-teal-700 block mb-1">Support reply:</span><span class="whitespace-pre-line">${escapeHtml(t.agent_reply)}</span></div>`;
+    if (t.customer_reply) {
+      replyBlock += `<div class="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700"><span class="font-medium text-slate-600 block mb-1">Your reply:</span><span class="whitespace-pre-line">${escapeHtml(t.customer_reply)}</span></div>`;
+    } else if (t.status !== 'resolved') {
+      replyBlock += `
+        <div class="mt-2">
+          <textarea id="custReply-${t.id}" rows="2" placeholder="Reply to support..." class="w-full text-sm p-2 border border-slate-300 rounded-lg"></textarea>
+          <button onclick="sendCustomerReply(${t.id})" class="mt-1 bg-accent hover:bg-teal-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">Send</button>
+        </div>`;
+    }
+  }
+  return `
+    <div class="px-4 py-3 border-b border-slate-100 last:border-0">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-slate-800">${escapeHtml(t.subject)}</p>
+          <p class="text-xs text-slate-400 mt-0.5">#${t.id}${internalDetails}</p>
+          ${internal ? slaBadge(t) : ''}
+        </div>
+        <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span>
+      </div>
+      ${replyBlock}
+    </div>`;
+}
+
+async function sendCustomerReply(ticketId) {
+  const text = document.getElementById(`custReply-${ticketId}`).value.trim();
+  if (!text) return;
+  try {
+    await apiPost(`/tickets/${ticketId}/customer-reply`, { customer_reply: text });
+    renderCustomerTickets();
+  } catch {
+    alert('Could not send your reply.');
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatBotText(str) {
+  // Escape HTML first (safety), then convert **bold** markdown into real <strong> tags
+  const escaped = escapeHtml(str);
+  return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+async function renderKnowledgeBase() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<div id="kbList" class="space-y-4">Loading...</div>`;
+
+  try {
+    const articles = await apiGet('/kb');
+    const grouped = {};
+    articles.forEach(a => {
+      if (!grouped[a.category]) grouped[a.category] = [];
+      grouped[a.category].push(a);
+    });
+
+    document.getElementById('kbList').innerHTML = Object.entries(grouped).map(([category, items]) => `
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">${escapeHtml(category)}</h3>
+        ${items.map(a => `
+          <div class="px-4 py-3 border-t border-slate-100">
+            <p class="text-sm font-medium text-slate-800">${escapeHtml(a.title)}</p>
+            <p class="text-xs text-slate-500 mt-1">${escapeHtml(a.content)}</p>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  } catch {
+    document.getElementById('kbList').innerHTML = `<p class="text-red-500">Could not load Knowledge Base.</p>`;
+  }
+}
+
+// ---------- Customer: My Tickets (+ create new) ----------
+async function renderCustomerTickets() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+      <h3 class="text-sm font-semibold text-slate-800 mb-3">Raise a new ticket</h3>
+      <div id="ticketFormError" class="hidden mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+      <form id="newTicketForm" class="space-y-3">
+        <input type="text" id="ticketSubject" required placeholder="Subject"
+          class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600">
+        <textarea id="ticketDescription" required placeholder="Describe your issue" rows="3"
+          class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600"></textarea>
+        <button type="submit" class="bg-accent hover:bg-teal-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">Submit ticket</button>
+      </form>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">My Tickets</h3>
+      <div id="ticketList" class="text-sm text-slate-400 px-4 pb-4">Loading...</div>
+    </div>`;
+
+  document.getElementById('newTicketForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById('ticketFormError');
+    errBox.classList.add('hidden');
+    try {
+      await apiPost('/tickets', {
+        subject: document.getElementById('ticketSubject').value,
+        description: document.getElementById('ticketDescription').value
+      });
+      renderCustomerTickets();
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove('hidden');
+    }
+  });
+
+  const list = document.getElementById('ticketList');
+  try {
+    const tickets = await apiGet('/tickets');
+    list.innerHTML = tickets.length
+      ? tickets.map(t => ticketRow(t, false, false)).join('')
+      : `<p class="text-slate-400 py-2">You don't have any tickets yet.</p>`;
+  } catch {
+    list.innerHTML = `<p class="text-red-500 py-2">Could not load tickets.</p>`;
+  }
+}
+
+// ---------- Agent: My Queue ----------
+async function renderAgentQueue() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">My Queue</h3>
+    <div id="ticketList" class="text-sm text-slate-400 px-4 pb-4">Loading...</div>
+  </div>`;
+
+  const list = document.getElementById('ticketList');
+  try {
+    const tickets = await apiGet('/tickets');
+    list.innerHTML = tickets.length
+      ? tickets.map(t => `
+        <div class="px-4 py-3 border-b border-slate-100 last:border-0">
+          ${ticketRow(t, true)}
+          ${t.customer_reply ? `<div class="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-slate-700"><span class="font-medium text-blue-700 block mb-1">Customer replied:</span><span class="whitespace-pre-line">${escapeHtml(t.customer_reply)}</span></div>` : ''}
+          <div class="flex gap-2 mt-2">
+            ${t.status !== 'resolved' ? `<button onclick="markResolved(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Mark resolved</button>` : ''}
+            ${t.status !== 'resolved' ? `<button onclick="getSuggestion(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-teal-200 hover:bg-teal-50 text-teal-700">✨ Suggest response</button>` : ''}
+          </div>
+          <div id="suggestion-${t.id}" class="hidden mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg text-sm text-slate-700"></div>
+        </div>`).join('')
+      : `<p class="text-slate-400 py-2">No tickets assigned to you right now.</p>`;
+  } catch {
+    list.innerHTML = `<p class="text-red-500 py-2">Could not load tickets.</p>`;
+  }
+}
+
+async function getSuggestion(ticketId) {
+  const box = document.getElementById(`suggestion-${ticketId}`);
+  box.classList.remove('hidden');
+  box.innerHTML = 'Generating suggestion...';
+  try {
+    const res = await apiGet(`/tickets/${ticketId}/suggest-response`);
+    box.innerHTML = `
+      <textarea id="replyBox-${ticketId}" rows="6" class="w-full text-sm p-2 border border-teal-300 rounded-lg bg-white text-slate-800"></textarea>
+      <button onclick="sendReply(${ticketId})" class="mt-2 bg-accent hover:bg-teal-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">Send to customer</button>
+    `;
+    document.getElementById(`replyBox-${ticketId}`).value = res.suggestion;
+  } catch {
+    box.innerHTML = 'Could not generate a suggestion right now.';
+  }
+}
+
+async function sendReply(ticketId) {
+  const text = document.getElementById(`replyBox-${ticketId}`).value;
+  try {
+    await apiPatch(`/tickets/${ticketId}`, { agent_reply: text });
+    renderAgentQueue();
+  } catch {
+    alert('Could not send reply.');
+  }
+}
+async function markResolved(ticketId) {
+  await apiPatch(`/tickets/${ticketId}`, { status: 'resolved' });
+  renderAgentQueue();
+}
+
+// ---------- Team Lead: Escalations (SLA-breached tickets) ----------
+let _teamTicketsData = [];
+let _pendingTransferTicketIds = new Set();
+
+async function renderTeamTickets() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+              <th class="px-3 py-2 align-top whitespace-nowrap">
+                <div class="mb-1.5">Ticket ID</div>
+                <input type="text" id="fId" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap">
+                <div class="mb-1.5">Customer ID</div>
+                <input type="text" id="fCustId" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap">
+                <div class="mb-1.5">Name</div>
+                <input type="text" id="fName" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap">
+                <div class="mb-1.5">Subject</div>
+                <input type="text" id="fSubject" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+              </th>
+              <th class="px-3 py-2 align-top">
+                <div class="mb-1.5">Description</div>
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap">
+                <div class="mb-1.5">Agent</div>
+                <input type="text" id="fAgent" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap">
+                <div class="mb-1.5">Priority</div>
+                <select id="fPriority" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                  <option value="">All</option>
+                  <option value="P1">P1</option><option value="P2">P2</option>
+                  <option value="P3">P3</option><option value="P4">P4</option>
+                </select>
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap" style="width: 110px;">
+                <div class="mb-1.5">SLA</div>
+                <select id="fSla" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                  <option value="">All</option>
+                  <option value="breached">Breached</option>
+                  <option value="remaining">Within SLA</option>
+                </select>
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap" style="width: 110px;">
+                <div class="mb-1.5">Status</div>
+                <select id="fStatus" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                  <option value="">All</option>
+                  <option value="open">Open</option><option value="in_progress">In progress</option>
+                  <option value="escalated">Escalated</option><option value="resolved">Resolved</option>
+                </select>
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap" style="width: 110px;">
+                <div class="mb-1.5">Transfer</div>
+                <select id="fTransfer" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                  <option value="">All</option>
+                  <option value="sent">Request sent</option>
+                  <option value="available">Transfer</option>
+                </select>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="teamTicketsBody"></tbody>
+        </table>
+      </div>
+    </div>`;
+
+  ['fId', 'fCustId', 'fName', 'fSubject', 'fAgent', 'fPriority', 'fSla', 'fStatus', 'fTransfer'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderFilteredTeamTickets);
+    document.getElementById(id).addEventListener('change', renderFilteredTeamTickets);
+  });
+
+  const tbody = document.getElementById('teamTicketsBody');
+  try {
+    _teamTicketsData = await apiGet('/tickets');
+    try {
+      const outgoing = await apiGet('/tickets/transfer-requests/outgoing');
+      _pendingTransferTicketIds = new Set(outgoing.filter(r => r.status === 'pending').map(r => r.ticket_id));
+    } catch {
+      _pendingTransferTicketIds = new Set();
+    }
+    renderFilteredTeamTickets();
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-4 text-red-500">Could not load tickets.</td></tr>`;
+  }
+}
+
+const TRANSFER_STATUS_STYLES = {
+  pending: 'bg-blue-50 text-blue-700 border-blue-200',
+  accepted: 'bg-green-50 text-green-700 border-green-200',
+  declined: 'bg-red-50 text-red-700 border-red-200',
+};
+
+async function renderSentTransfers() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">My Sent Transfer Requests</h3>
+    <div id="sentTransferList" class="text-sm text-slate-400 px-4 pb-4">Loading...</div>
+  </div>`;
+
+  const list = document.getElementById('sentTransferList');
+  try {
+    const requests = await apiGet('/tickets/transfer-requests/outgoing');
+    list.innerHTML = requests.length
+      ? requests.map(r => {
+        const style = TRANSFER_STATUS_STYLES[r.status] || TRANSFER_STATUS_STYLES.pending;
+        return `
+        <div class="px-4 py-3 border-b border-slate-100 last:border-0 flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-800">Ticket #${r.ticket_id} → Team ${r.to_team_id}</p>
+            <p class="text-xs text-slate-400">Sent ${new Date(r.created_at.endsWith('Z') ? r.created_at : r.created_at + 'Z').toLocaleString()}</p>
+          </div>
+          <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${style} capitalize whitespace-nowrap">${r.status}</span>
+        </div>`;
+      }).join('')
+      : `<p class="text-slate-400 py-2">You haven't sent any transfer requests.</p>`;
+  } catch {
+    list.innerHTML = `<p class="text-red-500 py-2">Could not load sent requests.</p>`;
+  }
+}
+
+async function renderDashboard() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<p class="text-slate-400">Loading dashboard...</p>`;
+
+  try {
+    const stats = await apiGet('/tickets/dashboard/stats');
+
+    content.innerHTML = `
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        ${kpiCard('Total Tickets', stats.total_tickets, 'text-slate-800')}
+        ${kpiCard('Open', stats.open_tickets, 'text-blue-600')}
+        ${kpiCard('In Progress', stats.status_counts.in_progress, 'text-amber-600')}
+        ${kpiCard('Resolved', stats.resolved_tickets, 'text-green-600')}
+        ${kpiCard('SLA Breaches', stats.sla_breaches, 'text-red-600')}
+        ${kpiCard('Resolution Rate', stats.resolution_rate_percent + '%', 'text-teal-600')}
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">Tickets by Priority</h3>
+          <div style="height: 220px;"><canvas id="priorityChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">Average Resolution Time by Day (hours)</h3>
+          <div style="height: 220px;"><canvas id="resolutionChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-5 md:col-span-2">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">Average Response Time by Day (minutes)</h3>
+          <div style="height: 220px;"><canvas id="responseChart"></canvas></div>
+        </div>
+      </div>
+    `;
+
+    new Chart(document.getElementById('priorityChart'), {
+      type: 'bar',
+      data: {
+        labels: Object.keys(stats.priority_counts),
+        datasets: [{ label: 'Tickets', data: Object.values(stats.priority_counts), backgroundColor: '#0D9488' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    const resolutionDays = Object.keys(stats.avg_resolution_hours_by_day);
+    new Chart(document.getElementById('resolutionChart'), {
+      type: 'line',
+      data: {
+        labels: resolutionDays,
+        datasets: [{
+          label: 'Avg hours to resolve',
+          data: Object.values(stats.avg_resolution_hours_by_day),
+          borderColor: '#0D9488',
+          backgroundColor: '#0D948833',
+          fill: true,
+          tension: 0.3,
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+    if (resolutionDays.length === 0) {
+      document.getElementById('resolutionChart').insertAdjacentHTML('afterend', '<p class="text-xs text-slate-400 mt-2">No resolved tickets yet.</p>');
+    }
+
+    const responseDays = Object.keys(stats.avg_response_minutes_by_day);
+    new Chart(document.getElementById('responseChart'), {
+      type: 'line',
+      data: {
+        labels: responseDays,
+        datasets: [{
+          label: 'Avg minutes to first response',
+          data: Object.values(stats.avg_response_minutes_by_day),
+          borderColor: '#3B82F6',
+          backgroundColor: '#3B82F633',
+          fill: true,
+          tension: 0.3,
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+    if (responseDays.length === 0) {
+      document.getElementById('responseChart').insertAdjacentHTML('afterend', '<p class="text-xs text-slate-400 mt-2">No agent responses recorded yet — this data starts populating once agents send replies.</p>');
+    }
+
+  } catch (err) {
+    content.innerHTML = `<p class="text-red-500">Could not load dashboard: ${err.message}</p>`;
+  }
+}
+
+function kpiCard(label, value, colorClass) {
+  return `
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <p class="text-xs text-slate-500 uppercase font-medium">${label}</p>
+      <p class="text-2xl font-bold ${colorClass} mt-1">${value}</p>
+    </div>`;
+}
+
+async function renderSlaRules() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden max-w-2xl">
+    <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">SLA Configuration</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+            <th class="px-4 py-2">Priority</th>
+            <th class="px-4 py-2">Response (min)</th>
+            <th class="px-4 py-2">Resolution (min)</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody id="slaRulesBody"></tbody>
+      </table>
+    </div>
+  </div>`;
+
+  await loadSlaRules();
+}
+
+async function loadSlaRules() {
+  const tbody = document.getElementById('slaRulesBody');
+  try {
+    const rules = await apiGet('/tickets/admin/sla-rules');
+    tbody.innerHTML = rules.map(r => `
+      <tr class="border-b border-slate-100 last:border-0">
+        <td class="px-4 py-2.5 font-medium text-slate-800">${r.priority}</td>
+        <td class="px-4 py-2.5"><input type="number" id="resp-${r.id}" value="${r.response_minutes}" class="w-24 px-2 py-1 border border-slate-300 rounded-md text-sm"></td>
+        <td class="px-4 py-2.5"><input type="number" id="res-${r.id}" value="${r.resolution_minutes}" class="w-24 px-2 py-1 border border-slate-300 rounded-md text-sm"></td>
+        <td class="px-4 py-2.5"><button onclick="saveSlaRule(${r.id})" class="text-xs px-2.5 py-1 rounded-lg bg-accent text-white hover:bg-teal-700">Save</button></td>
+      </tr>
+    `).join('');
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-4 text-red-500">Could not load SLA rules.</td></tr>`;
+  }
+}
+
+async function saveSlaRule(ruleId) {
+  const response_minutes = parseInt(document.getElementById(`resp-${ruleId}`).value);
+  const resolution_minutes = parseInt(document.getElementById(`res-${ruleId}`).value);
+  try {
+    await apiPatch(`/tickets/admin/sla-rules/${ruleId}`, { response_minutes, resolution_minutes });
+    alert('SLA rule updated.');
+  } catch (err) {
+    alert('Could not update: ' + err.message);
+  }
+}
+
+async function renderMassEmail() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<p class="text-slate-400">Loading customers...</p>`;
+
+  try {
+    const users = await apiGet('/auth/admin/users');
+    const customers = users.filter(u => u.role === 'customer');
+
+    content.innerHTML = `
+      <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6 max-w-2xl">
+        <h3 class="text-sm font-semibold text-slate-800 mb-3">Select customers to notify</h3>
+        <div class="max-h-56 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1 mb-4">
+          ${customers.map(c => `
+            <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer">
+              <input type="checkbox" class="mass-email-checkbox" value="${c.id}">
+              <span class="text-sm text-slate-700">${escapeHtml(c.name)} <span class="text-slate-400">(${escapeHtml(c.email)})</span></span>
+            </label>
+          `).join('')}
+        </div>
+        <div class="flex gap-3 mb-4 text-xs">
+          <button onclick="toggleAllMassEmail(true)" class="text-teal-600 hover:underline">Select all</button>
+          <button onclick="toggleAllMassEmail(false)" class="text-slate-500 hover:underline">Clear all</button>
+        </div>
+
+        <input type="text" id="massEmailSubject" placeholder="Subject" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm mb-3">
+        <textarea id="massEmailMessage" rows="5" placeholder="Describe the issue and estimated resolution time..." class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm mb-3"></textarea>
+
+        <div id="massEmailStatus" class="hidden mb-3 text-sm px-3 py-2 rounded-lg"></div>
+        <button onclick="sendMassEmail()" class="bg-accent hover:bg-teal-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">Send notification</button>
+      </div>
+    `;
+  } catch {
+    content.innerHTML = `<p class="text-red-500">Could not load customers.</p>`;
+  }
+}
+
+function toggleAllMassEmail(checked) {
+  document.querySelectorAll('.mass-email-checkbox').forEach(cb => cb.checked = checked);
+}
+
+async function sendMassEmail() {
+  const ids = Array.from(document.querySelectorAll('.mass-email-checkbox:checked')).map(cb => parseInt(cb.value));
+  const subject = document.getElementById('massEmailSubject').value.trim();
+  const message = document.getElementById('massEmailMessage').value.trim();
+  const statusBox = document.getElementById('massEmailStatus');
+
+  if (ids.length === 0) {
+    alert('Select at least one customer.');
+    return;
+  }
+  if (!subject || !message) {
+    alert('Subject and message are required.');
+    return;
+  }
+
+  statusBox.classList.remove('hidden');
+  statusBox.className = 'mb-3 text-sm px-3 py-2 rounded-lg bg-slate-50 text-slate-600';
+  statusBox.textContent = 'Sending...';
+
+  try {
+    const res = await apiPost('/auth/admin/mass-email', { customer_ids: ids, subject, message });
+    const successCount = res.results.filter(r => r.sent).length;
+    statusBox.className = 'mb-3 text-sm px-3 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200';
+    statusBox.textContent = `Sent to ${successCount} of ${res.results.length} selected customers.`;
+  } catch (err) {
+    statusBox.className = 'mb-3 text-sm px-3 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200';
+    statusBox.textContent = 'Failed to send: ' + err.message;
+  }
+}
+
+async function renderUserManagement() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6 max-w-2xl">
+      <h3 class="text-sm font-semibold text-slate-800 mb-3">Create new user</h3>
+      <div id="createUserError" class="hidden mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+      <form id="createUserForm" class="space-y-3">
+        <input type="text" id="newUserName" required placeholder="Full name" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
+        <input type="email" id="newUserEmail" required placeholder="Email" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
+        <input type="password" id="newUserPassword" required placeholder="Password" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
+        <select id="newUserRole" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
+          <option value="agent">Agent</option>
+          <option value="team_lead">Team Lead</option>
+          <option value="admin">Admin</option>
+        </select>
+        <input type="number" id="newUserTeam" placeholder="Team ID (optional, for Agent/Team Lead)" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
+        <button type="submit" class="bg-accent hover:bg-teal-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">Create user</button>
+      </form>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">All Users</h3>
+      <div id="userList" class="text-sm text-slate-400 px-4 pb-4">Loading...</div>
+    </div>`;
+
+  document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById('createUserError');
+    errBox.classList.add('hidden');
+    const name = document.getElementById('newUserName').value;
+    const email = document.getElementById('newUserEmail').value;
+    const password = document.getElementById('newUserPassword').value;
+    const role = document.getElementById('newUserRole').value;
+    const team_id = document.getElementById('newUserTeam').value;
+
+    const params = new URLSearchParams({ name, email, password, role });
+    if (team_id) params.append('team_id', team_id);
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/admin/create-user?${params}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${currentUser.access_token}` }
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to create user');
+      renderUserManagement();
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove('hidden');
+    }
+  });
+
+  const list = document.getElementById('userList');
+  try {
+    const users = await apiGet('/auth/admin/users');
+    list.innerHTML = users.map(u => `
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 last:border-0">
+        <div>
+          <p class="text-sm font-medium text-slate-800">${escapeHtml(u.name)}</p>
+          <p class="text-xs text-slate-400">${escapeHtml(u.email)}</p>
+        </div>
+        <span class="text-xs font-medium px-2.5 py-1 rounded-full border bg-slate-50 text-slate-600 border-slate-200 capitalize">${u.role.replace('_',' ')}</span>
+      </div>
+    `).join('');
+  } catch {
+    list.innerHTML = `<p class="text-red-500 py-2">Could not load users.</p>`;
+  }
+}
+
+async function transferTicket(ticketId, currentTeamId) {
+  const newTeamId = currentTeamId === 1 ? 2 : 1;
+  if (!confirm(`Send a transfer REQUEST for this ticket to Team ${newTeamId}? It will only move once their Team Lead accepts.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/tickets/${ticketId}/request-transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.access_token}` },
+      body: JSON.stringify({ new_team_id: newTeamId })
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Request failed');
+    renderTeamTickets();
+  } catch (err) {
+    alert('Could not request transfer: ' + err.message);
+  }
+}
+
+let _allTicketsData = [];
+
+async function renderAllTickets() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">All Tickets — Team 1 & Team 2</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+            <th class="px-3 py-2 align-top whitespace-nowrap">
+              <div class="mb-1.5">Ticket ID</div>
+              <input type="text" id="atId" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+            </th>
+            <th class="px-3 py-2 align-top whitespace-nowrap">
+              <div class="mb-1.5">Customer</div>
+              <input type="text" id="atCustomer" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+            </th>
+            <th class="px-3 py-2 align-top">
+              <div class="mb-1.5">Subject</div>
+            </th>
+            <th class="px-3 py-2 align-top whitespace-nowrap">
+              <div class="mb-1.5">Team</div>
+              <select id="atTeam" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                <option value="">All</option>
+                <option value="1">Team 1</option>
+                <option value="2">Team 2</option>
+              </select>
+            </th>
+            <th class="px-3 py-2 align-top whitespace-nowrap">
+              <div class="mb-1.5">Agent</div>
+              <input type="text" id="atAgent" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+            </th>
+            <th class="px-3 py-2 align-top whitespace-nowrap">
+              <div class="mb-1.5">Priority</div>
+              <select id="atPriority" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                <option value="">All</option>
+                <option value="P1">P1</option><option value="P2">P2</option>
+                <option value="P3">P3</option><option value="P4">P4</option>
+              </select>
+            </th>
+            <th class="px-3 py-2 align-top whitespace-nowrap">
+              <div class="mb-1.5">Status</div>
+              <select id="atStatus" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                <option value="">All</option>
+                <option value="open">Open</option><option value="in_progress">In progress</option>
+                <option value="escalated">Escalated</option><option value="resolved">Resolved</option>
+              </select>
+            </th>
+            <th class="px-3 py-2 align-top whitespace-nowrap">
+              <div class="mb-1.5">Transfer</div>
+              <input type="text" id="atTransfer" placeholder="Filter" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+            </th>
+          </tr>
+        </thead>
+        <tbody id="allTicketsBody"></tbody>
+      </table>
+    </div>
+  </div>`;
+
+  ['atId', 'atCustomer', 'atTeam', 'atAgent', 'atPriority', 'atStatus', 'atTransfer'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderFilteredAllTickets);
+    document.getElementById(id).addEventListener('change', renderFilteredAllTickets);
+  });
+
+  const tbody = document.getElementById('allTicketsBody');
+  try {
+    _allTicketsData = await apiGet('/tickets/admin/all-tickets');
+    renderFilteredAllTickets();
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-4 text-red-500">Could not load tickets.</td></tr>`;
+  }
+}
+
+function renderFilteredAllTickets() {
+  const fId = document.getElementById('atId').value.toLowerCase();
+  const fCustomer = document.getElementById('atCustomer').value.toLowerCase();
+  const fTeam = document.getElementById('atTeam').value;
+  const fAgent = document.getElementById('atAgent').value.toLowerCase();
+  const fPriority = document.getElementById('atPriority').value;
+  const fStatus = document.getElementById('atStatus').value;
+  const fTransfer = document.getElementById('atTransfer').value.toLowerCase();
+
+  const filtered = _allTicketsData.filter(t => {
+    if (fId && !String(t.id).includes(fId)) return false;
+    if (fCustomer && !(t.customer_name || '').toLowerCase().includes(fCustomer)) return false;
+    if (fTeam && String(t.team_id) !== fTeam) return false;
+    if (fAgent && !(t.agent_name || '').toLowerCase().includes(fAgent)) return false;
+    if (fPriority && t.priority !== fPriority) return false;
+    if (fStatus && t.status !== fStatus) return false;
+    if (fTransfer && !(t.transfer_summary || '').toLowerCase().includes(fTransfer)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('allTicketsBody');
+  tbody.innerHTML = filtered.length ? filtered.map(t => {
+    const statusClass = STATUS_STYLES[t.status] || STATUS_STYLES.open;
+    return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+      <td class="px-3 py-2.5 text-slate-500">#${t.id}</td>
+      <td class="px-3 py-2.5 text-slate-500">${escapeHtml(t.customer_name || '—')}</td>
+      <td class="px-3 py-2.5 font-medium text-slate-800">${escapeHtml(t.subject)}</td>
+      <td class="px-3 py-2.5 text-slate-500">Team ${t.team_id ?? '—'}</td>
+      <td class="px-3 py-2.5 text-slate-500">${escapeHtml(t.agent_name || '—')}</td>
+      <td class="px-3 py-2.5">${t.priority}</td>
+      <td class="px-3 py-2.5"><span class="text-xs font-medium px-2 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span></td>
+      <td class="px-3 py-2.5 text-slate-500 whitespace-nowrap">${escapeHtml(t.transfer_summary)}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8" class="px-4 py-6 text-center text-slate-400">No tickets match these filters.</td></tr>`;
+}
+
+async function renderTransferRequests() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">Incoming Transfer Requests</h3>
+    <div id="transferList" class="text-sm text-slate-400 px-4 pb-4">Loading...</div>
+  </div>`;
+
+  const list = document.getElementById('transferList');
+  try {
+    const requests = await apiGet('/tickets/transfer-requests/incoming');
+    list.innerHTML = requests.length
+      ? requests.map(r => `
+        <div class="px-4 py-3 border-b border-slate-100 last:border-0 flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-800">Ticket #${r.ticket_id} — from Team ${r.from_team_id}</p>
+            <p class="text-xs text-slate-400">Requested ${new Date(r.created_at.endsWith('Z') ? r.created_at : r.created_at + 'Z').toLocaleString()}</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="respondTransfer(${r.id}, true)" class="text-xs px-2.5 py-1 rounded-lg bg-accent text-white hover:bg-teal-700">Accept</button>
+            <button onclick="respondTransfer(${r.id}, false)" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Decline</button>
+          </div>
+        </div>`).join('')
+      : `<p class="text-slate-400 py-2">No incoming transfer requests.</p>`;
+  } catch {
+    list.innerHTML = `<p class="text-red-500 py-2">Could not load transfer requests.</p>`;
+  }
+}
+
+async function respondTransfer(requestId, accept) {
+  try {
+    const res = await fetch(`${API_BASE}/tickets/transfer-requests/${requestId}/respond?accept=${accept}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${currentUser.access_token}` }
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+    renderTransferRequests();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+function showFullDescription(ticketId) {
+  const ticket = _teamTicketsData.find(t => t.id === ticketId) || _escalationsData.find(t => t.id === ticketId);
+  if (!ticket) return;
+  alert(`Ticket #${ticket.id}: ${ticket.subject}\n\n${ticket.description}`);
+}
+
+function _slaInfo(t) {
+  if (t.status === 'resolved') return { text: 'Within SLA', breached: false };
+  if (!t.sla_deadline) return { text: '—', breached: false };
+  const isoString = t.sla_deadline.endsWith('Z') ? t.sla_deadline : t.sla_deadline + 'Z';
+  const deadline = new Date(isoString);
+  const now = new Date();
+  if (now > deadline) return { text: 'Breached', breached: true };
+  const hoursLeft = Math.round((deadline - now) / (1000 * 60 * 60));
+  return { text: `${hoursLeft}h remaining`, breached: false };
+}
+
+function renderFilteredTeamTickets() {
+  const fId = document.getElementById('fId').value.toLowerCase();
+  const fCustId = document.getElementById('fCustId').value.toLowerCase();
+  const fName = document.getElementById('fName').value.toLowerCase();
+  const fSubject = document.getElementById('fSubject').value.toLowerCase();
+  const fAgent = document.getElementById('fAgent').value.toLowerCase();
+  const fPriority = document.getElementById('fPriority').value;
+  const fSla = document.getElementById('fSla').value;
+  const fStatus = document.getElementById('fStatus').value;
+  const fTransfer = document.getElementById('fTransfer').value;
+
+  const filtered = _teamTicketsData.filter(t => {
+    const isPendingTransfer = _pendingTransferTicketIds.has(t.id);
+    if (fTransfer === 'sent' && !isPendingTransfer) return false;
+    if (fTransfer === 'available' && (isPendingTransfer || t.status === 'resolved')) return false;
+    const sla = _slaInfo(t);
+    if (fId && !String(t.id).includes(fId)) return false;
+    if (fCustId && !String(t.customer_id).includes(fCustId)) return false;
+    if (fName && !(t.customer_name || '').toLowerCase().includes(fName)) return false;
+   if (fSubject && !t.subject.toLowerCase().includes(fSubject)) return false;
+    if (fAgent && !(t.agent_name || '').toLowerCase().includes(fAgent)) return false;
+    if (fPriority && t.priority !== fPriority) return false;
+    if (fSla === 'breached' && !sla.breached) return false;
+    if (fSla === 'remaining' && sla.breached) return false;
+    if (fStatus && t.status !== fStatus) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('teamTicketsBody');
+  tbody.innerHTML = filtered.length ? filtered.map(t => {
+    const sla = _slaInfo(t);
+    const statusClass = STATUS_STYLES[t.status] || STATUS_STYLES.open;
+    return `<tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+      <td class="px-4 py-2.5 text-slate-500">#${t.id}</td>
+      <td class="px-4 py-2.5 text-slate-500">#${t.customer_id}</td>
+      <td class="px-4 py-2.5">${escapeHtml(t.customer_name || '—')}</td>
+      <td class="px-4 py-2.5 font-medium text-slate-800">${escapeHtml(t.subject)}</td>
+      <td class="px-4 py-2.5 text-slate-500">
+        <span class="max-w-xs truncate block">${escapeHtml(t.description)}</span>
+        <button onclick="showFullDescription(${t.id})" class="text-teal-600 hover:underline text-xs">View more</button>
+      </td>
+      <td class="px-4 py-2.5 text-slate-500">${escapeHtml(t.agent_name || '—')}</td>
+      <td class="px-4 py-2.5">${t.priority}</td>
+      <td class="px-4 py-2.5 ${sla.breached ? 'text-red-600 font-medium' : 'text-slate-500'}">${sla.breached ? '⚠ ' : ''}${sla.text}</td>
+      <td class="px-4 py-2.5"><span class="text-xs font-medium px-2 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span></td>
+      <td class="px-4 py-2.5">
+        ${_pendingTransferTicketIds.has(t.id)
+          ? `<span class="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 whitespace-nowrap inline-block">Request sent</span>`
+          : (t.status !== 'resolved' ? `<button onclick="transferTicket(${t.id}, ${t.team_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Transfer</button>` : '')}
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8" class="px-4 py-6 text-center text-slate-400">No tickets match these filters.</td></tr>`;
+}
+
+// ---------- Team Lead: Escalations (SLA-breached tickets) ----------
+let _escalationsData = [];
+let _escalationSort = { key: 'overdueMinutes', dir: 'desc' };
+
+async function renderEscalations() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm table-fixed">
+          <thead>
+            <tr class="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+              <th class="px-3 py-2 align-middle whitespace-nowrap">Ticket ID</th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap">Customer ID</th>
+              <th class="px-3 py-2 align-middle">Subject</th>
+              <th class="px-3 py-2 align-middle">Description</th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('priority')" id="th-priority">Priority <span class="text-slate-300">⇅</span></th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap">Agent</th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('overdueMinutes')" id="th-overdueMinutes">Overdue by <span class="text-slate-300">⇅</span></th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('created_at')" id="th-created_at">Created <span class="text-slate-300">⇅</span></th>
+            </tr>
+          </thead>
+          <tbody id="escalationsBody"></tbody>
+        </table>
+      </div>
+    </div>`;
+
+  const tbody = document.getElementById('escalationsBody');
+  try {
+    _escalationsData = await apiGet('/tickets/escalations');
+    renderSortedEscalations();
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-4 text-red-500">Could not load escalations.</td></tr>`;
+  }
+}
+
+function _overdueText(minutes) {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+}
+
+function sortEscalations(key) {
+  if (_escalationSort.key === key) {
+    _escalationSort.dir = _escalationSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _escalationSort = { key, dir: 'desc' };
+  }
+  renderSortedEscalations();
+}
+
+function renderSortedEscalations() {
+  const sortLabels = { priority: 'Priority', overdueMinutes: 'Overdue by', created_at: 'Created' };
+  ['priority', 'overdueMinutes', 'created_at'].forEach(k => {
+    const th = document.getElementById('th-' + k);
+    if (!th) return;
+    const isActive = k === _escalationSort.key;
+    const arrowClass = isActive ? 'text-slate-700' : 'text-slate-300';
+    th.innerHTML = `${sortLabels[k]} <span class="${arrowClass}">⇅</span>`;
+  });
+  const tbody = document.getElementById('escalationsBody');
+  if (!_escalationsData.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-6 text-center text-slate-400">No escalations right now — all tickets within SLA.</td></tr>`;
+    return;
+  }
+
+  const now = new Date();
+  const withOverdue = _escalationsData.map(t => {
+    const deadline = new Date(t.sla_deadline.endsWith('Z') ? t.sla_deadline : t.sla_deadline + 'Z');
+    return { ...t, overdueMinutes: Math.round((now - deadline) / (1000 * 60)) };
+  });
+
+  const { key, dir } = _escalationSort;
+  withOverdue.sort((a, b) => {
+    let av = a[key], bv = b[key];
+    if (key === 'created_at') { av = new Date(av); bv = new Date(bv); }
+    if (av < bv) return dir === 'asc' ? -1 : 1;
+    if (av > bv) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  tbody.innerHTML = withOverdue.map(t => `
+    <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+      <td class="px-3 py-2.5 text-slate-500">#${t.id}</td>
+      <td class="px-3 py-2.5 text-slate-500">#${t.customer_id}</td>
+      <td class="px-3 py-2.5 font-medium text-slate-800">${escapeHtml(t.subject)}</td>
+      <td class="px-3 py-2.5 text-slate-500">
+        <span class="max-w-xs truncate block">${escapeHtml(t.description)}</span>
+        <button onclick="showFullDescription(${t.id})" class="text-teal-600 hover:underline text-xs">View more</button>
+      </td>
+      <td class="px-3 py-2.5">${t.priority}</td>
+      <td class="px-3 py-2.5 text-slate-500">${escapeHtml(t.agent_name || '—')}</td>
+      <td class="px-3 py-2.5 text-red-600 font-medium">⚠ ${_overdueText(t.overdueMinutes)}</td>
+      <td class="px-3 py-2.5 text-slate-500">${new Date(t.created_at.endsWith('Z') ? t.created_at : t.created_at + 'Z').toLocaleString()}</td>
+    </tr>
+  `).join('');
+}
+
+</script>
+</body>
+</html>
