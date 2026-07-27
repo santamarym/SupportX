@@ -15,6 +15,10 @@ st.markdown("""
         #MainMenu {visibility: hidden;}
         iframe {
             height: 100vh !important;
+            display: block;
+        }
+        html, body {
+            overflow: hidden !important;
         }
     </style>
 """, unsafe_allow_html=True)
