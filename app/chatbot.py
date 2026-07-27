@@ -315,6 +315,9 @@ STRICT RULES:
 - NO "Subject:" line
 - NO greeting like "Hello" or "Dear Customer"
 - NO sign-off like "Best regards" or "[Agent Name]"
+- NEVER say "reply to this email" or "respond to this email" — this is a
+  message inside the app's ticket thread, not an email. If the customer
+  needs to confirm something, say "reply to this message" instead.
 - Maximum 3 sentences, OR a maximum 3-item bullet list if steps are needed
 - Get straight to the point — no restating the problem back at length
 
