@@ -109,3 +109,13 @@ class TicketTransferRequest(Base):
     resolved_at = Column(DateTime, nullable=True)
 
     ticket = relationship("Ticket")
+
+class TicketMessage(Base):
+    __tablename__ = "ticket_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=False)
+    sender_role = Column(String, nullable=False)  # "agent" or "customer"
+    sender_name = Column(String, nullable=True)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

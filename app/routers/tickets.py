@@ -3,12 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, Ticket, RoleEnum, StatusEnum, TicketTransferRequest as TransferModel, TransferStatusEnum, SLARule
-from app.schemas import TicketCreate, TicketUpdate, TicketOut, CustomerReplyRequest, TransferRequestCreate, TransferRequestOut, AuditLogOut, SLARuleOut, SLARuleUpdate
-from app.auth import get_current_user, require_role
+from app.models import User, Ticket, RoleEnum, StatusEnum, TicketTransferRequest as TransferModel, TransferStatusEnum, SLARule, TicketMessage
+from app.schemas import TicketCreate, TicketUpdate, TicketOut, CustomerReplyRequest, TransferRequestCreate, TransferRequestOut, TicketMessageCreate, TicketMessageOut
 from app.sla_utils import assign_sla_deadline, is_breached
 from app.chatbot import classify_ticket_priority, suggest_agent_response
 from app.team_utils import assign_team, assign_agent
+from app.auth import get_current_user, require_role
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -71,31 +71,6 @@ def list_escalations(
 
     return query.order_by(Ticket.sla_deadline.asc()).all()
 
-@router.get("/audit-logs/transfers", response_model=list[AuditLogOut])
-def list_transfer_audit_logs(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("admin")),
-):
-    """Admin-only view of every ticket transfer ever requested, across both
-    teams — pending, accepted, or declined — reusing the existing
-    ticket_transfer_requests table as the audit trail."""
-    requests = db.query(TransferModel).order_by(TransferModel.created_at.desc()).all()
-    results = []
-    for r in requests:
-        ticket = db.query(Ticket).filter(Ticket.id == r.ticket_id).first()
-        requester = db.query(User).filter(User.id == r.requested_by).first()
-        results.append(AuditLogOut(
-            id=r.id,
-            ticket_id=r.ticket_id,
-            ticket_subject=ticket.subject if ticket else "(deleted ticket)",
-            from_team_id=r.from_team_id,
-            to_team_id=r.to_team_id,
-            requested_by_name=requester.name if requester else "Unknown",
-            status=r.status.value,
-            created_at=r.created_at,
-            resolved_at=r.resolved_at,
-        ))
-    return results
 
 @router.get("/admin/all-tickets")
 def list_all_tickets_with_transfers(
@@ -186,29 +161,33 @@ def get_dashboard_stats(
         "avg_response_minutes_by_day": avg_response_by_day,
     }
 
-@router.get("/admin/sla-rules", response_model=list[SLARuleOut])
+@router.get("/admin/sla-rules")
 def list_sla_rules(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
 ):
-    return db.query(SLARule).order_by(SLARule.priority).all()
+    rules = db.query(SLARule).order_by(SLARule.priority).all()
+    return [
+        {"id": r.id, "priority": r.priority.value, "response_minutes": r.response_minutes, "resolution_minutes": r.resolution_minutes}
+        for r in rules
+    ]
 
 
-@router.patch("/admin/sla-rules/{rule_id}", response_model=SLARuleOut)
+@router.patch("/admin/sla-rules/{rule_id}")
 def update_sla_rule(
     rule_id: int,
-    payload: SLARuleUpdate,
+    payload: dict,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin")),
 ):
     rule = db.query(SLARule).filter(SLARule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="SLA rule not found")
-    rule.response_minutes = payload.response_minutes
-    rule.resolution_minutes = payload.resolution_minutes
+    rule.response_minutes = payload["response_minutes"]
+    rule.resolution_minutes = payload["resolution_minutes"]
     db.commit()
     db.refresh(rule)
-    return rule
+    return {"id": rule.id, "priority": rule.priority.value, "response_minutes": rule.response_minutes, "resolution_minutes": rule.resolution_minutes}
 
 @router.get("/notifications")
 def get_notifications(
@@ -271,7 +250,10 @@ def get_suggested_response(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    suggestion = suggest_agent_response(ticket.subject, ticket.description)
+    messages = db.query(TicketMessage).filter(TicketMessage.ticket_id == ticket_id).order_by(TicketMessage.created_at).all()
+    conversation = "\n".join(f"{m.sender_role}: {m.message}" for m in messages)
+
+    suggestion = suggest_agent_response(ticket.subject, ticket.description, conversation)
     return {"suggestion": suggestion}
 
 @router.post("/{ticket_id}/customer-reply", response_model=TicketOut)
@@ -378,6 +360,68 @@ def respond_to_transfer_request(
 
     db.commit()
     return {"message": f"Transfer request {'accepted' if accept else 'declined'}."}
+
+@router.get("/{ticket_id}/messages", response_model=list[TicketMessageOut])
+def list_ticket_messages(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    _check_ticket_access(ticket, current_user)
+    return db.query(TicketMessage).filter(TicketMessage.ticket_id == ticket_id).order_by(TicketMessage.created_at).all()
+
+
+@router.post("/{ticket_id}/messages", response_model=TicketMessageOut)
+def add_agent_message(
+    ticket_id: int,
+    payload: TicketMessageCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("agent", "team_lead", "admin")),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    msg = TicketMessage(
+        ticket_id=ticket_id,
+        sender_role="agent",
+        sender_name=current_user.name,
+        message=payload.message,
+    )
+    db.add(msg)
+    ticket.status = StatusEnum.in_progress
+    ticket.reply_seen_by_customer = False
+    if ticket.first_response_at is None:
+        ticket.first_response_at = datetime.utcnow()
+    db.commit()
+    db.refresh(msg)
+    return msg
+
+
+@router.post("/{ticket_id}/customer-message", response_model=TicketMessageOut)
+def add_customer_message(
+    ticket_id: int,
+    payload: TicketMessageCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("customer")),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id, Ticket.customer_id == current_user.id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    msg = TicketMessage(
+        ticket_id=ticket_id,
+        sender_role="customer",
+        sender_name=current_user.name,
+        message=payload.message,
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+    return msg
 
 @router.get("/{ticket_id}", response_model=TicketOut)
 def get_ticket(

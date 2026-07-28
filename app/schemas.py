@@ -123,3 +123,17 @@ class MassEmailRequest(BaseModel):
     customer_ids: list[int]
     subject: str
     message: str
+
+class TicketMessageCreate(BaseModel):
+    message: str
+
+
+class TicketMessageOut(BaseModel):
+    id: int
+    sender_role: str
+    sender_name: str | None
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

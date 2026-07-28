@@ -591,19 +591,6 @@ function ticketRow(t, showCustomer, internal = true) {
   const internalDetails = internal
     ? ` · ${t.priority}${showCustomer ? ' · Customer #' + t.customer_id : ''}`
     : '';
-  let replyBlock = '';
-  if (!internal && t.agent_reply) {
-    replyBlock = `<div class="mt-2 p-2.5 bg-teal-50 border border-teal-200 rounded-lg text-sm text-slate-700"><span class="font-medium text-teal-700 block mb-1">Support reply:</span><span class="whitespace-pre-line">${escapeHtml(t.agent_reply)}</span></div>`;
-    if (t.customer_reply) {
-      replyBlock += `<div class="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700"><span class="font-medium text-slate-600 block mb-1">Your reply:</span><span class="whitespace-pre-line">${escapeHtml(t.customer_reply)}</span></div>`;
-    } else if (t.status !== 'resolved') {
-      replyBlock += `
-        <div class="mt-2">
-          <textarea id="custReply-${t.id}" rows="2" placeholder="Reply to support..." class="w-full text-sm p-2 border border-slate-300 rounded-lg"></textarea>
-          <button onclick="sendCustomerReply(${t.id})" class="mt-1 bg-accent hover:bg-teal-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">Send</button>
-        </div>`;
-    }
-  }
   return `
     <div class="px-4 py-3 border-b border-slate-100 last:border-0">
       <div class="flex items-center justify-between">
@@ -614,18 +601,30 @@ function ticketRow(t, showCustomer, internal = true) {
         </div>
         <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span>
       </div>
-      ${replyBlock}
     </div>`;
 }
 
-async function sendCustomerReply(ticketId) {
-  const text = document.getElementById(`custReply-${ticketId}`).value.trim();
-  if (!text) return;
+function renderMessageThreadHTML(messages, ticketStatus) {
+  if (!messages.length) {
+    return `<p class="text-xs text-slate-400 italic">No messages yet.</p>`;
+  }
+  return messages.map(m => {
+    const isAgent = m.sender_role === 'agent';
+    const bg = isAgent ? 'bg-teal-50 border-teal-200 text-teal-700' : 'bg-slate-50 border-slate-200 text-slate-700';
+    const label = isAgent ? `${escapeHtml(m.sender_name || 'Support')}` : `${escapeHtml(m.sender_name || 'Customer')}`;
+    return `<div class="p-2.5 border rounded-lg text-sm ${bg} mb-2">
+      <span class="font-medium block mb-0.5">${label}</span>
+      <span class="whitespace-pre-line">${escapeHtml(m.message)}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadAndRenderThread(ticketId, containerId) {
   try {
-    await apiPost(`/tickets/${ticketId}/customer-reply`, { customer_reply: text });
-    renderCustomerTickets();
+    const messages = await apiGet(`/tickets/${ticketId}/messages`);
+    document.getElementById(containerId).innerHTML = renderMessageThreadHTML(messages);
   } catch {
-    alert('Could not send your reply.');
+    document.getElementById(containerId).innerHTML = `<p class="text-xs text-red-500">Could not load messages.</p>`;
   }
 }
 
@@ -709,10 +708,35 @@ async function renderCustomerTickets() {
   try {
     const tickets = await apiGet('/tickets');
     list.innerHTML = tickets.length
-      ? tickets.map(t => ticketRow(t, false, false)).join('')
+      ? tickets.map(t => `
+        <div class="border-b border-slate-100 last:border-0 pb-3 mb-3">
+          ${ticketRow(t, false, false)}
+          <div class="mt-2">
+            <div id="custThread-${t.id}" class="text-xs text-slate-400">Loading...</div>
+          </div>
+          ${t.status !== 'resolved' ? `
+          <div class="mt-2 flex gap-2">
+            <input type="text" id="custMsg-${t.id}" placeholder="Reply to support..." class="flex-1 text-sm px-2 py-1.5 border border-slate-300 rounded-lg">
+            <button onclick="sendCustomerMessage(${t.id})" class="text-xs px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-teal-700">Send</button>
+          </div>` : ''}
+        </div>`).join('')
       : `<p class="text-slate-400 py-2">You don't have any tickets yet.</p>`;
+    tickets.forEach(t => loadAndRenderThread(t.id, `custThread-${t.id}`));
   } catch {
     list.innerHTML = `<p class="text-red-500 py-2">Could not load tickets.</p>`;
+  }
+}
+
+async function sendCustomerMessage(ticketId) {
+  const input = document.getElementById(`custMsg-${ticketId}`);
+  const message = input.value.trim();
+  if (!message) return;
+  try {
+    await apiPost(`/tickets/${ticketId}/customer-message`, { message });
+    input.value = '';
+    renderCustomerTickets();
+  } catch (err) {
+    alert('Could not send message: ' + err.message);
   }
 }
 
@@ -731,14 +755,24 @@ async function renderAgentQueue() {
       ? tickets.map(t => `
         <div class="px-4 py-3 border-b border-slate-100 last:border-0">
           ${ticketRow(t, true)}
-          ${t.customer_reply ? `<div class="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-slate-700"><span class="font-medium text-blue-700 block mb-1">Customer replied:</span><span class="whitespace-pre-line">${escapeHtml(t.customer_reply)}</span></div>` : ''}
+          <div class="mt-2">
+            <p class="text-xs font-medium text-slate-500 mb-1.5">Conversation</p>
+            <div id="thread-${t.id}" class="text-xs text-slate-400">Loading...</div>
+          </div>
           <div class="flex gap-2 mt-2">
+            ${t.status === 'open' ? `<button onclick="startWorking(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-blue-200 hover:bg-blue-50 text-blue-700">Start working</button>` : ''}
             ${t.status !== 'resolved' ? `<button onclick="markResolved(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Mark resolved</button>` : ''}
             ${t.status !== 'resolved' ? `<button onclick="getSuggestion(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-teal-200 hover:bg-teal-50 text-teal-700">✨ Suggest response</button>` : ''}
           </div>
           <div id="suggestion-${t.id}" class="hidden mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg text-sm text-slate-700"></div>
+          ${t.status !== 'resolved' ? `
+          <div class="mt-2 flex gap-2">
+            <input type="text" id="agentMsg-${t.id}" placeholder="Type a message..." class="flex-1 text-xs px-2 py-1.5 border border-slate-300 rounded-lg">
+            <button onclick="sendAgentMessage(${t.id})" class="text-xs px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-teal-700">Send</button>
+          </div>` : ''}
         </div>`).join('')
       : `<p class="text-slate-400 py-2">No tickets assigned to you right now.</p>`;
+    tickets.forEach(t => loadAndRenderThread(t.id, `thread-${t.id}`));
   } catch {
     list.innerHTML = `<p class="text-red-500 py-2">Could not load tickets.</p>`;
   }
@@ -750,25 +784,26 @@ async function getSuggestion(ticketId) {
   box.innerHTML = 'Generating suggestion...';
   try {
     const res = await apiGet(`/tickets/${ticketId}/suggest-response`);
-    box.innerHTML = `
-      <textarea id="replyBox-${ticketId}" rows="6" class="w-full text-sm p-2 border border-teal-300 rounded-lg bg-white text-slate-800"></textarea>
-      <button onclick="sendReply(${ticketId})" class="mt-2 bg-accent hover:bg-teal-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">Send to customer</button>
-    `;
-    document.getElementById(`replyBox-${ticketId}`).value = res.suggestion;
+    box.classList.add('hidden');
+    document.getElementById(`agentMsg-${ticketId}`).value = res.suggestion;
   } catch {
     box.innerHTML = 'Could not generate a suggestion right now.';
   }
 }
 
-async function sendReply(ticketId) {
-  const text = document.getElementById(`replyBox-${ticketId}`).value;
+async function sendAgentMessage(ticketId) {
+  const input = document.getElementById(`agentMsg-${ticketId}`);
+  const message = input.value.trim();
+  if (!message) return;
   try {
-    await apiPatch(`/tickets/${ticketId}`, { agent_reply: text });
+    await apiPost(`/tickets/${ticketId}/messages`, { message });
+    input.value = '';
     renderAgentQueue();
-  } catch {
-    alert('Could not send reply.');
+  } catch (err) {
+    alert('Could not send message: ' + err.message);
   }
 }
+
 async function markResolved(ticketId) {
   await apiPatch(`/tickets/${ticketId}`, { status: 'resolved' });
   renderAgentQueue();
@@ -1128,6 +1163,7 @@ async function renderUserManagement() {
         <input type="email" id="newUserEmail" required placeholder="Email" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
         <input type="password" id="newUserPassword" required placeholder="Password" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
         <select id="newUserRole" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm">
+          <option value="customer">Customer</option>
           <option value="agent">Agent</option>
           <option value="team_lead">Team Lead</option>
           <option value="admin">Admin</option>

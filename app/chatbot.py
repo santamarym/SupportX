@@ -299,7 +299,7 @@ Respond with ONLY one word: P1, P2, P3, or P4."""
         print(f"Classification error: {e}")
         return "P3"
 
-def suggest_agent_response(ticket_subject: str, ticket_description: str) -> str:
+def suggest_agent_response(ticket_subject: str, ticket_description: str, conversation: str = "") -> str:
     """Generates a DRAFT response an Agent can review, edit, and send to
     the customer — the agent stays in control, this just saves them from
     starting with a blank page. Uses the same semantic KB search as the
@@ -318,14 +318,22 @@ STRICT RULES:
 - NEVER say "reply to this email" or "respond to this email" — this is a
   message inside the app's ticket thread, not an email. If the customer
   needs to confirm something, say "reply to this message" instead.
+- READ THE CONVERSATION SO FAR CAREFULLY. If the customer already said the
+  issue is resolved, working, or fine, do NOT repeat earlier troubleshooting
+  advice — instead acknowledge that and ask if they need anything else, or
+  confirm you'll close the ticket.
+- If the customer said something ISN'T working or gave new information,
+  respond specifically to THAT, don't repeat the same generic advice again.
 - Maximum 3 sentences, OR a maximum 3-item bullet list if steps are needed
-- Get straight to the point — no restating the problem back at length
 
 Relevant Knowledge Base info:
 {kb}
 
 Ticket subject: {subject}
 Ticket description: {description}
+
+Conversation so far:
+{conversation}
 
 Output ONLY the short reply text, nothing else."""
     )
@@ -334,6 +342,7 @@ Output ONLY the short reply text, nothing else."""
             "kb": relevant_kb,
             "subject": ticket_subject,
             "description": ticket_description,
+            "conversation": conversation if conversation else "(no messages yet)",
         })
         return _extract_text(result.content).strip()
     except Exception as e:
