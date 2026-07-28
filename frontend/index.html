@@ -133,10 +133,10 @@
 </div>
 
 <!-- ============ APP SHELL (shown after login) ============ -->
-<div id="appShell" class="hidden h-screen flex overflow-hidden">
+<div id="appShell" class="hidden h-screen flex overflow-hidden relative">
 
   <!-- Sidebar -->
-  <aside class="w-60 bg-slate-900 text-slate-300 flex flex-col shrink-0">
+ <aside id="sidebar" class="hidden md:flex fixed md:static top-0 left-0 h-full w-60 bg-slate-900 text-slate-300 flex-col shrink-0 z-50">
     <div class="px-5 py-5 flex items-center gap-2 border-b border-slate-800">
       <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
         <span class="text-white font-display font-bold text-sm">X</span>
@@ -168,7 +168,13 @@
 
   <!-- Main content -->
   <main class="flex-1 overflow-y-auto h-screen">
-    <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+    <button id="hamburgerBtn" onclick="toggleSidebar()" class="md:hidden fixed top-4 left-4 z-40 bg-slate-900 text-white p-2 rounded-lg">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+</button>
+<div id="sidebarOverlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/40 z-40"></div>
+
+<main class="flex-1 overflow-y-auto h-screen">
+  <header class="bg-white border-b border-slate-200 px-8 py-4 pl-16 md:pl-8 flex items-center justify-between">
       <h1 id="pageTitle" class="font-display font-semibold text-xl text-slate-800"></h1>
       <span id="roleBadge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-teal-50 accent border border-teal-200"></span>
     </header>
@@ -415,8 +421,17 @@ function enterApp() {
 // ---------- Page content per role ----------
 const DOM_RENDER_PAGES = new Set(['tickets', 'queue', 'team_tickets','escalations','kb','transfers','sent_transfers','dashboard','all_tickets','sla','users','mass_email']);
 
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('hidden');
+  document.getElementById('sidebarOverlay').classList.toggle('hidden');
+}
+
 function showPage(pageId, title) {
   document.getElementById('pageTitle').textContent = title;
+  if (window.innerWidth < 768) {
+    document.getElementById('sidebar').classList.add('hidden');
+    document.getElementById('sidebarOverlay').classList.add('hidden');
+  }
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-slate-800', 'text-white'));
   event?.target?.classList.add('bg-slate-800', 'text-white');
   checkNotifications();
@@ -619,12 +634,15 @@ function renderMessageThreadHTML(messages, ticketStatus) {
   }).join('');
 }
 
-async function loadAndRenderThread(ticketId, containerId) {
+async function loadThreadIfAny(ticketId, containerId) {
   try {
     const messages = await apiGet(`/tickets/${ticketId}/messages`);
-    document.getElementById(containerId).innerHTML = renderMessageThreadHTML(messages);
+    if (messages.length > 0) {
+      document.getElementById(containerId).innerHTML = `<div class="mt-2">${renderMessageThreadHTML(messages)}</div>`;
+    }
+    // If no messages, leave the container empty — no placeholder text
   } catch {
-    document.getElementById(containerId).innerHTML = `<p class="text-xs text-red-500">Could not load messages.</p>`;
+    // Silently ignore — don't clutter the UI with an error for this
   }
 }
 
@@ -711,19 +729,37 @@ async function renderCustomerTickets() {
       ? tickets.map(t => `
         <div class="border-b border-slate-100 last:border-0 pb-3 mb-3">
           ${ticketRow(t, false, false)}
-          <div class="mt-2">
-            <div id="custThread-${t.id}" class="text-xs text-slate-400">Loading...</div>
-          </div>
-          ${t.status !== 'resolved' ? `
-          <div class="mt-2 flex gap-2">
-            <input type="text" id="custMsg-${t.id}" placeholder="Reply to support..." class="flex-1 text-sm px-2 py-1.5 border border-slate-300 rounded-lg">
-            <button onclick="sendCustomerMessage(${t.id})" class="text-xs px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-teal-700">Send</button>
-          </div>` : ''}
+          <div id="custThread-${t.id}"></div>
         </div>`).join('')
       : `<p class="text-slate-400 py-2">You don't have any tickets yet.</p>`;
-    tickets.forEach(t => loadAndRenderThread(t.id, `custThread-${t.id}`));
+    tickets.forEach(t => loadCustomerThread(t.id));
   } catch {
     list.innerHTML = `<p class="text-red-500 py-2">Could not load tickets.</p>`;
+  }
+}
+
+async function loadCustomerThread(ticketId) {
+  const container = document.getElementById(`custThread-${ticketId}`);
+  try {
+    const messages = await apiGet(`/tickets/${ticketId}/messages`);
+    if (messages.length === 0) {
+      container.innerHTML = ''; // nothing to show — agent hasn't replied yet
+      return;
+    }
+    let html = `<div class="mt-2">${renderMessageThreadHTML(messages)}</div>`;
+    const lastMsg = messages[messages.length - 1];
+    // Only show the reply box if the LAST message was from the agent
+    // (i.e. it's genuinely the customer's turn to respond)
+    if (lastMsg.sender_role === 'agent') {
+      html += `
+        <div class="mt-2">
+          <textarea id="custMsg-${ticketId}" rows="2" placeholder="Reply to support..." class="w-full text-sm p-2 border border-slate-300 rounded-lg bg-white text-slate-800"></textarea>
+          <button onclick="sendCustomerMessage(${ticketId})" class="mt-1 text-xs px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-teal-700">Send</button>
+        </div>`;
+    }
+    container.innerHTML = html;
+  } catch {
+    container.innerHTML = '';
   }
 }
 
@@ -733,8 +769,7 @@ async function sendCustomerMessage(ticketId) {
   if (!message) return;
   try {
     await apiPost(`/tickets/${ticketId}/customer-message`, { message });
-    input.value = '';
-    renderCustomerTickets();
+    loadCustomerThread(ticketId);
   } catch (err) {
     alert('Could not send message: ' + err.message);
   }
@@ -755,40 +790,43 @@ async function renderAgentQueue() {
       ? tickets.map(t => `
         <div class="px-4 py-3 border-b border-slate-100 last:border-0">
           ${ticketRow(t, true)}
-          <div class="mt-2">
-            <p class="text-xs font-medium text-slate-500 mb-1.5">Conversation</p>
-            <div id="thread-${t.id}" class="text-xs text-slate-400">Loading...</div>
-          </div>
+          <div id="thread-${t.id}"></div>
           <div class="flex gap-2 mt-2">
-            ${t.status === 'open' ? `<button onclick="startWorking(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-blue-200 hover:bg-blue-50 text-blue-700">Start working</button>` : ''}
             ${t.status !== 'resolved' ? `<button onclick="markResolved(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Mark resolved</button>` : ''}
             ${t.status !== 'resolved' ? `<button onclick="getSuggestion(${t.id})" class="text-xs px-2.5 py-1 rounded-lg border border-teal-200 hover:bg-teal-50 text-teal-700">✨ Suggest response</button>` : ''}
           </div>
-          <div id="suggestion-${t.id}" class="hidden mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg text-sm text-slate-700"></div>
-          ${t.status !== 'resolved' ? `
-          <div class="mt-2 flex gap-2">
-            <input type="text" id="agentMsg-${t.id}" placeholder="Type a message..." class="flex-1 text-xs px-2 py-1.5 border border-slate-300 rounded-lg">
-            <button onclick="sendAgentMessage(${t.id})" class="text-xs px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-teal-700">Send</button>
-          </div>` : ''}
+          <div id="replyBox-${t.id}" class="hidden mt-2">
+            <textarea id="agentMsg-${t.id}" rows="2" class="w-full text-sm p-2 border border-slate-300 rounded-lg bg-white text-slate-800"></textarea>
+            <div class="flex gap-2 mt-1">
+              <button onclick="sendAgentMessage(${t.id})" class="text-xs px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-teal-700">Send</button>
+              <button onclick="closeReplyBox(${t.id})" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Cancel</button>
+            </div>
+          </div>
         </div>`).join('')
       : `<p class="text-slate-400 py-2">No tickets assigned to you right now.</p>`;
-    tickets.forEach(t => loadAndRenderThread(t.id, `thread-${t.id}`));
+    tickets.forEach(t => loadThreadIfAny(t.id, `thread-${t.id}`));
   } catch {
     list.innerHTML = `<p class="text-red-500 py-2">Could not load tickets.</p>`;
   }
 }
 
 async function getSuggestion(ticketId) {
-  const box = document.getElementById(`suggestion-${ticketId}`);
+  const box = document.getElementById(`replyBox-${ticketId}`);
+  const textarea = document.getElementById(`agentMsg-${ticketId}`);
   box.classList.remove('hidden');
-  box.innerHTML = 'Generating suggestion...';
+  textarea.value = 'Generating suggestion...';
   try {
     const res = await apiGet(`/tickets/${ticketId}/suggest-response`);
-    box.classList.add('hidden');
-    document.getElementById(`agentMsg-${ticketId}`).value = res.suggestion;
+    textarea.value = res.suggestion;
   } catch {
-    box.innerHTML = 'Could not generate a suggestion right now.';
+    textarea.value = '';
+    alert('Could not generate a suggestion right now.');
   }
+}
+
+function closeReplyBox(ticketId) {
+  document.getElementById(`replyBox-${ticketId}`).classList.add('hidden');
+  document.getElementById(`agentMsg-${ticketId}`).value = '';
 }
 
 async function sendAgentMessage(ticketId) {
@@ -797,7 +835,6 @@ async function sendAgentMessage(ticketId) {
   if (!message) return;
   try {
     await apiPost(`/tickets/${ticketId}/messages`, { message });
-    input.value = '';
     renderAgentQueue();
   } catch (err) {
     alert('Could not send message: ' + err.message);
@@ -818,7 +855,7 @@ async function renderTeamTickets() {
   content.innerHTML = `
     <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm table-fixed min-w-[950px]">
           <thead>
             <tr class="bg-slate-50 text-left text-xs text-slate-500 uppercase">
               <th class="px-3 py-2 align-top whitespace-nowrap">
@@ -1470,14 +1507,14 @@ async function renderEscalations() {
         <table class="w-full text-sm table-fixed">
           <thead>
             <tr class="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-              <th class="px-3 py-2 align-middle whitespace-nowrap">Ticket ID</th>
-              <th class="px-3 py-2 align-middle whitespace-nowrap">Customer ID</th>
-              <th class="px-3 py-2 align-middle">Subject</th>
-              <th class="px-3 py-2 align-middle">Description</th>
-              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('priority')" id="th-priority">Priority <span class="text-slate-300">⇅</span></th>
-              <th class="px-3 py-2 align-middle whitespace-nowrap">Agent</th>
-              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('overdueMinutes')" id="th-overdueMinutes">Overdue by <span class="text-slate-300">⇅</span></th>
-              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('created_at')" id="th-created_at">Created <span class="text-slate-300">⇅</span></th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap" style="width: 80px;">Ticket ID</th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap" style="width: 100px;">Customer ID</th>
+              <th class="px-3 py-2 align-middle" style="width: 160px;">Subject</th>
+              <th class="px-3 py-2 align-middle" style="width: 180px;">Description</th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('priority')" id="th-priority" style="width: 90px;">Priority <span class="text-slate-300">⇅</span></th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap" style="width: 110px;">Agent</th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('overdueMinutes')" id="th-overdueMinutes" style="width: 110px;">Overdue by <span class="text-slate-300">⇅</span></th>
+              <th class="px-3 py-2 align-middle whitespace-nowrap cursor-pointer hover:text-slate-700" onclick="sortEscalations('created_at')" id="th-created_at" style="width: 120px;">Created <span class="text-slate-300">⇅</span></th>
             </tr>
           </thead>
           <tbody id="escalationsBody"></tbody>

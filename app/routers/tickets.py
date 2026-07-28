@@ -141,7 +141,7 @@ def get_dashboard_stats(
     response_by_day = {}
     for t in all_tickets:
         if t.first_response_at:
-            day = t.created_at.strftime("%Y-%m-%d")
+            day = t.first_response_at.strftime("%Y-%m-%d")
             minutes = (t.first_response_at - t.created_at).total_seconds() / 60
             response_by_day.setdefault(day, []).append(minutes)
 
