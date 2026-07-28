@@ -182,6 +182,16 @@
   </main>
 </div>
 
+<div id="confirmModal" class="hidden fixed inset-0 bg-black/40 z-[60] flex items-center justify-center px-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+    <p id="confirmModalText" class="text-sm text-slate-700 mb-5"></p>
+    <div class="flex gap-3 justify-end">
+      <button onclick="closeConfirmModal(false)" class="text-sm px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">No</button>
+      <button id="confirmModalYesBtn" class="text-sm px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Yes, delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ FLOATING CHAT BUTTON (Customer only) ============ -->
 <div id="chatBubbleWrap" class="hidden fixed bottom-6 right-6 z-40">
   <button id="chatBubble" onclick="toggleChatPopup()" class="w-14 h-14 rounded-full bg-accent hover:bg-teal-700 text-white shadow-lg flex items-center justify-center text-2xl transition" style="animation: chatFloat 2.5s ease-in-out infinite;">
@@ -421,6 +431,39 @@ function enterApp() {
 // ---------- Page content per role ----------
 const DOM_RENDER_PAGES = new Set(['tickets', 'queue', 'team_tickets','escalations','kb','transfers','sent_transfers','dashboard','all_tickets','sla','users','mass_email']);
 
+let _confirmModalCallback = null;
+
+function showConfirmModal(text, onConfirm) {
+  document.getElementById('confirmModalText').textContent = text;
+  document.getElementById('confirmModal').classList.remove('hidden');
+  _confirmModalCallback = onConfirm;
+}
+
+function closeConfirmModal(confirmed) {
+  document.getElementById('confirmModal').classList.add('hidden');
+  if (confirmed && _confirmModalCallback) {
+    _confirmModalCallback();
+  }
+  _confirmModalCallback = null;
+}
+
+document.getElementById('confirmModalYesBtn').addEventListener('click', () => closeConfirmModal(true));
+
+async function deleteUser(userId, email) {
+  showConfirmModal(`Delete user ${email}? This cannot be undone.`, async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${currentUser.access_token}` }
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to delete');
+      renderUserManagement();
+    } catch (err) {
+      alert('Could not delete: ' + err.message);
+    }
+  });
+}
+
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('hidden');
   document.getElementById('sidebarOverlay').classList.toggle('hidden');
@@ -612,6 +655,7 @@ function ticketRow(t, showCustomer, internal = true) {
         <div>
           <p class="text-sm font-medium text-slate-800">${escapeHtml(t.subject)}</p>
           <p class="text-xs text-slate-400 mt-0.5">#${t.id}${internalDetails}</p>
+          <p class="text-xs text-slate-500 mt-1">${escapeHtml(t.description)}</p>
           ${internal ? slaBadge(t) : ''}
         </div>
         <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span>
@@ -663,7 +707,7 @@ async function renderKnowledgeBase() {
   content.innerHTML = `<div id="kbList" class="space-y-4">Loading...</div>`;
 
   try {
-    const articles = await apiGet('/kb');
+    const articlnow = await apiGet('/kb');
     const grouped = {};
     articles.forEach(a => {
       if (!grouped[a.category]) grouped[a.category] = [];
@@ -1189,6 +1233,8 @@ async function sendMassEmail() {
   }
 }
 
+let _allUsersData = [];
+
 async function renderUserManagement() {
   const content = document.getElementById('pageContent');
   content.innerHTML = `
@@ -1210,7 +1256,10 @@ async function renderUserManagement() {
       </form>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <h3 class="text-sm font-semibold text-slate-800 px-4 pt-4 pb-2">All Users</h3>
+      <div class="px-4 pt-4 pb-2 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-800">All Users</h3>
+        <input type="text" id="userSearchInput" placeholder="Search by name or email..." class="text-xs px-3 py-1.5 border border-slate-300 rounded-lg w-64">
+      </div>
       <div id="userList" class="text-sm text-slate-400 px-4 pb-4">Loading...</div>
     </div>`;
 
@@ -1240,21 +1289,33 @@ async function renderUserManagement() {
     }
   });
 
-  const list = document.getElementById('userList');
   try {
-    const users = await apiGet('/auth/admin/users');
-    list.innerHTML = users.map(u => `
+    _allUsersData = await apiGet('/auth/admin/users');
+    renderFilteredUsers();
+    document.getElementById('userSearchInput').addEventListener('input', renderFilteredUsers);
+  } catch {
+    document.getElementById('userList').innerHTML = `<p class="text-red-500 py-2">Could not load users.</p>`;
+  }
+}
+
+function renderFilteredUsers() {
+  const query = document.getElementById('userSearchInput').value.toLowerCase();
+  const filtered = _allUsersData.filter(u =>
+    u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)
+  );
+  const list = document.getElementById('userList');
+  list.innerHTML = filtered.length ? filtered.map(u => `
       <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 last:border-0">
         <div>
           <p class="text-sm font-medium text-slate-800">${escapeHtml(u.name)}</p>
           <p class="text-xs text-slate-400">${escapeHtml(u.email)}</p>
         </div>
-        <span class="text-xs font-medium px-2.5 py-1 rounded-full border bg-slate-50 text-slate-600 border-slate-200 capitalize">${u.role.replace('_',' ')}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium px-2.5 py-1 rounded-full border bg-slate-50 text-slate-600 border-slate-200 capitalize">${u.role.replace('_',' ')}</span>
+          <button onclick="deleteUser(${u.id}, '${escapeHtml(u.email)}')" class="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">Delete</button>
+        </div>
       </div>
-    `).join('');
-  } catch {
-    list.innerHTML = `<p class="text-red-500 py-2">Could not load users.</p>`;
-  }
+    `).join('') : `<p class="text-slate-400 py-2">No users match your search.</p>`;
 }
 
 async function transferTicket(ticketId, currentTeamId) {

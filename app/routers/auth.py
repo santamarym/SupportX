@@ -86,6 +86,29 @@ def list_all_users(
 ):
     return db.query(User).order_by(User.role, User.name).all()
 
+@router.delete("/admin/users/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+):
+    """Deletes a user account. Note: if this user has existing tickets
+    (as customer or agent), this will fail due to foreign key constraints
+    — that's intentional, protecting ticket history from becoming orphaned."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete this user — they have existing tickets linked to their account."
+        )
+    return {"message": f"User {user.email} deleted."}
+
 @router.post("/admin/mass-email")
 def send_mass_email(
     payload: MassEmailRequest,
