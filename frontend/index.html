@@ -655,7 +655,7 @@ function ticketRow(t, showCustomer, internal = true) {
         <div>
           <p class="text-sm font-medium text-slate-800">${escapeHtml(t.subject)}</p>
           <p class="text-xs text-slate-400 mt-0.5">#${t.id}${internalDetails}</p>
-          <p class="text-xs text-slate-500 mt-1">${escapeHtml(t.description)}</p>
+          <p class="text-sm text-slate-500 mt-1">${escapeHtml(t.description)}</p>
           ${internal ? slaBadge(t) : ''}
         </div>
         <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span>
