@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="SupportX", layout="wide")
+st.set_page_config(page_title="TechServe / SupportX", layout="wide")
 
 st.markdown("""
     <style>
@@ -23,7 +23,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-with open("frontend/index.html", "r", encoding="utf-8") as f:
+# Decide which page to show based on a URL parameter, e.g. ?page=support
+page = st.query_params.get("page", "home")
+
+file_to_load = "frontend/index.html" if page == "support" else "home.html"
+
+with open(file_to_load, "r", encoding="utf-8") as f:
     html_content = f.read()
 
 components.html(html_content, height=1200, scrolling=False)

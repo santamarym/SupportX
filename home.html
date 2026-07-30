@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechServe Solutions — Project & Workflow Management</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; color: #1e293b; }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .accent { color: #0D9488; }
+  .bg-accent { background-color: #0D9488; }
+  .border-accent { border-color: #0D9488; }
+
+  @keyframes cardFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .kanban-card { animation: cardFloat 4s ease-in-out infinite; }
+  .kanban-card:nth-child(2) { animation-delay: 0.6s; }
+  .kanban-card:nth-child(3) { animation-delay: 1.2s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kanban-card { animation: none; }
+  }
+</style>
+</head>
+<body class="bg-white">
+
+<!-- ============ NAV ============ -->
+<header class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-100">
+  <div class="max-w-[1400px] mx-auto px-8 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+        <span class="text-white font-display font-bold text-sm">T</span>
+      </div>
+      <span class="font-display font-bold text-lg text-slate-900">TechServe</span>
+    </div>
+
+    <a href="?page=support" class="bg-accent hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Customer Support</a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="max-w-[1400px] mx-auto px-8 pt-16 pb-20 grid md:grid-cols-2 gap-12 items-center">
+  <div>
+    <p class="text-xs font-semibold accent tracking-wide uppercase mb-3">Project & workflow management</p>
+    <h1 class="font-display font-bold text-4xl md:text-5xl text-slate-900 leading-tight mb-5">
+      Where your team's work actually gets organized.
+    </h1>
+    <p class="text-slate-500 text-lg mb-8 leading-relaxed">
+      Boards, deadlines and reports your whole team can actually keep up with. No busywork.
+    </p>
+    <div class="flex flex-wrap gap-3">
+      <a href="#product" class="bg-accent hover:bg-teal-700 text-white font-medium px-6 py-3 rounded-lg transition">See how it works</a>
+    </div>
+  </div>
+
+  <div class="bg-slate-50 rounded-2xl border border-slate-200 p-5">
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase mb-2 px-1">To do</p>
+        <div class="kanban-card bg-white rounded-lg border border-slate-200 p-3 mb-2 shadow-sm">
+          <div class="w-8 h-1.5 rounded-full bg-blue-200 mb-2"></div>
+          <p class="text-xs font-medium text-slate-700">Design review</p>
+        </div>
+        <div class="kanban-card bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+          <div class="w-8 h-1.5 rounded-full bg-amber-200 mb-2"></div>
+          <p class="text-xs font-medium text-slate-700">Client onboarding</p>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase mb-2 px-1">In progress</p>
+        <div class="kanban-card bg-white rounded-lg border-2 border-accent p-3 shadow-md">
+          <div class="w-8 h-1.5 rounded-full bg-teal-300 mb-2"></div>
+          <p class="text-xs font-medium text-slate-700">Q3 roadmap</p>
+          <div class="flex -space-x-1.5 mt-2">
+            <div class="w-5 h-5 rounded-full bg-teal-400 border-2 border-white"></div>
+            <div class="w-5 h-5 rounded-full bg-blue-400 border-2 border-white"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase mb-2 px-1">Done</p>
+        <div class="kanban-card bg-white rounded-lg border border-slate-200 p-3 shadow-sm opacity-70">
+          <div class="w-8 h-1.5 rounded-full bg-green-300 mb-2"></div>
+          <p class="text-xs font-medium text-slate-700 line-through">Vendor contract</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section id="product" class="bg-slate-900 py-20">
+  <div class="max-w-[1400px] mx-auto px-8">
+    <h2 class="font-display font-bold text-3xl text-white mb-3">Everything your team needs</h2>
+    <p class="text-slate-400 mb-12 max-w-lg">Four things TechServe does well. Spend less time managing the tool. Spend more time doing the work.</p>
+
+    <div class="grid md:grid-cols-4 gap-6">
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="w-9 h-9 rounded-lg bg-teal-500/20 flex items-center justify-center mb-4">
+          <span class="text-lg">📋</span>
+        </div>
+        <h3 class="font-display font-semibold text-white mb-2">Task boards</h3>
+        <p class="text-sm text-slate-400">Track work the way your team actually thinks about it. No forced process.</p>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="w-9 h-9 rounded-lg bg-teal-500/20 flex items-center justify-center mb-4">
+          <span class="text-lg">👥</span>
+        </div>
+        <h3 class="font-display font-semibold text-white mb-2">Team collaboration</h3>
+        <p class="text-sm text-slate-400">Comments, files and assignments live right next to the work itself.</p>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="w-9 h-9 rounded-lg bg-teal-500/20 flex items-center justify-center mb-4">
+          <span class="text-lg">📊</span>
+        </div>
+        <h3 class="font-display font-semibold text-white mb-2">Reporting</h3>
+        <p class="text-sm text-slate-400">See real progress at a glance. Export it when someone above you asks.</p>
+      </div>
+      <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <div class="w-9 h-9 rounded-lg bg-teal-500/20 flex items-center justify-center mb-4">
+          <span class="text-lg">🔌</span>
+        </div>
+        <h3 class="font-display font-semibold text-white mb-2">Integrations</h3>
+        <p class="text-sm text-slate-400">Slack notifications and API access. Fits into what you already use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section id="about" class="max-w-[1000px] mx-auto px-8 py-20 text-center">
+  <p class="text-xs font-semibold accent tracking-wide uppercase mb-3">About TechServe</p>
+  <h2 class="font-display font-bold text-3xl text-slate-900 mb-5">Built by a team that got tired of tools that get in the way</h2>
+  <p class="text-slate-500 text-lg leading-relaxed">
+    TechServe Solutions Pvt. Ltd. is a project and workflow management platform built for growing teams.
+    We help businesses organize their work, track progress and collaborate effectively,
+    without unnecessary complexity.
+  </p>
+</section>
+
+<!-- ============ SUPPORT CALLOUT ============ -->
+<section class="bg-teal-50 border-y border-teal-100 py-14">
+  <div class="max-w-[1000px] mx-auto px-8 text-center">
+    <p class="text-slate-600 mb-6">Our support team and an AI assistant are ready when you need them.</p>
+    <a href="frontend/index.html" class="inline-block bg-accent hover:bg-teal-700 text-white font-medium px-6 py-3 rounded-lg transition">Go to Customer Support</a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t border-slate-100 py-10">
+  <div class="max-w-[1400px] mx-auto px-8 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded-md bg-accent flex items-center justify-center">
+        <span class="text-white font-display font-bold text-xs">T</span>
+      </div>
+      <span class="font-display font-semibold text-sm text-slate-700">TechServe Solutions</span>
+    </div>
+    <p class="text-xs text-slate-400">© 2026 TechServe Solutions Pvt. Ltd.</p>
+  </div>
+</footer>
+
+</body>
+</html>
