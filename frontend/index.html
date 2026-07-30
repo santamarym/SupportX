@@ -707,7 +707,8 @@ async function renderKnowledgeBase() {
   content.innerHTML = `<div id="kbList" class="space-y-4">Loading...</div>`;
 
   try {
-    const articlnow = await apiGet('/kb');
+    const articles = await apiGet('/kb');
+    console.log('KB articles loaded:', articles);
     const grouped = {};
     articles.forEach(a => {
       if (!grouped[a.category]) grouped[a.category] = [];
@@ -725,7 +726,8 @@ async function renderKnowledgeBase() {
         `).join('')}
       </div>
     `).join('');
-  } catch {
+  } catch (err) {
+    console.error('KB load error:', err);
     document.getElementById('kbList').innerHTML = `<p class="text-red-500">Could not load Knowledge Base.</p>`;
   }
 }
