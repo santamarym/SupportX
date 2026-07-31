@@ -34,7 +34,7 @@ else:
         </style>
     """, unsafe_allow_html=True)
     file_to_load = "home.html"
-    iframe_height = 1900
+    iframe_height = 100
     scrolling = True
 
 with open(file_to_load, "r", encoding="utf-8") as f:

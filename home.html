@@ -161,5 +161,12 @@
   </div>
 </footer>
 
+<script>
+  window.addEventListener('load', () => {
+    const height = document.body.scrollHeight;
+    window.parent.postMessage({ type: 'streamlit:setFrameHeight', height: height }, '*');
+  });
+</script>
+
 </body>
 </html>
