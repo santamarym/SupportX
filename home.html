@@ -164,14 +164,5 @@
   </div>
 </footer>
 
-<script>
-  function scrollToProduct() {
-    const el = document.getElementById('product');
-    const headerHeight = document.querySelector('header').offsetHeight;
-    const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - headerHeight;
-    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-  }
-</script>
-
 </body>
 </html>
