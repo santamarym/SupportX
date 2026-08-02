@@ -53,6 +53,9 @@
     <p class="text-slate-500 text-lg mb-8 leading-relaxed">
       Boards, deadlines and reports your whole team can actually keep up with. No busywork.
     </p>
+    <div class="flex flex-wrap gap-3">
+      <button onclick="scrollToProduct()" class="bg-accent hover:bg-teal-700 text-white font-medium px-6 py-3 rounded-lg transition">See how it works</button>
+    </div>
   </div>
 
   <div class="bg-slate-50 rounded-2xl border border-slate-200 p-5">
@@ -160,6 +163,15 @@
     <p class="text-xs text-slate-400">© 2026 TechServe Solutions Pvt. Ltd.</p>
   </div>
 </footer>
+
+<script>
+  function scrollToProduct() {
+    const el = document.getElementById('product');
+    const headerHeight = document.querySelector('header').offsetHeight;
+    const targetPosition = el.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+  }
+</script>
 
 </body>
 </html>

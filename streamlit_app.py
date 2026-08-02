@@ -14,12 +14,18 @@ if page == "support":
             header {visibility: hidden;}
             footer {visibility: hidden;}
             #MainMenu {visibility: hidden;}
-            iframe { height: 100vh !important; display: block; }
-            html, body { overflow: hidden !important; }
+            iframe { height: 100vh !important; display: block; border: none; }
+            html, body, .main, .stApp {
+                overflow: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            ::-webkit-scrollbar { display: none !important; }
+            * { scrollbar-width: none !important; }
         </style>
     """, unsafe_allow_html=True)
     file_to_load = "frontend/index.html"
-    iframe_height = 1200
+    iframe_height = 900
     scrolling = False
 else:
     # home.html is a normal long marketing page — let the whole page
