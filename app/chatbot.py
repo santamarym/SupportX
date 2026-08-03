@@ -356,31 +356,33 @@ def summarize_conversation(ticket_subject: str, conversation: str) -> str:
         return "No conversation yet."
 
     summary_prompt = ChatPromptTemplate.from_template(
-        """Summarize this support ticket conversation using this EXACT structure:
+        """Summarize this support ticket conversation in 1-2 short, clear sentences.
 
-"[Issue]. [Agent] first suggested [first troubleshooting step], which [did/did not] resolve it. [What happened next / final outcome]."
+Cover: what the customer needed, what actually happened (steps tried, or
+actions taken/requested), and the current state.
 
 RULES:
-- You MUST name at least one specific thing that was tried, even if it didn't work
+- Do NOT force every conversation into a "troubleshooting steps" format.
+  If this is about approving/declining an action (like account deletion,
+  a refund, a cancellation) rather than fixing a technical problem,
+  describe it that way instead — e.g. "The agent requested confirmation
+  to delete the account, but the customer declined."
 - Only state WHO resolved something or WHAT fixed it if the conversation
-  explicitly says so — if the customer just says it's working now without
-  explaining why, say that, don't invent a cause
-- CAREFULLY check whether the LAST message in the conversation is a final,
-  conclusive answer (like "no need to do that", "it works now", "please
-  cancel that request") — if so, the conversation has CONCLUDED, do not
-  say it is "waiting on the customer" or "pending" when the customer has
-  already given their final answer
-- Only say "waiting on customer" if the LAST message was from the agent
-  asking a question that hasn't been answered yet
+  explicitly says so
+- CAREFULLY check whether the LAST message is a final, conclusive answer
+  (e.g. "no need to do that", "it works now", "please cancel that") — if
+  so, the conversation has CONCLUDED. Do not say "waiting on customer" if
+  the customer already gave their final answer
+- Only say "waiting on customer" if the LAST message was from the agent,
+  asking something not yet answered
 - Do not use quotes or restate the ticket subject
-- Maximum 2 sentences
 
 Ticket subject: {subject}
 
 Conversation:
 {conversation}
 
-Output ONLY the summary following the structure above."""
+Output ONLY the 1-2 sentence summary."""
     )
     try:
         result = (summary_prompt | llm).invoke({
