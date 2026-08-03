@@ -356,15 +356,21 @@ def summarize_conversation(ticket_subject: str, conversation: str) -> str:
         return "No conversation yet."
 
     summary_prompt = ChatPromptTemplate.from_template(
-        """Summarize this support ticket conversation in ONE short sentence,
-covering what the issue was and its current state (resolved, still being
-worked on, waiting on customer, etc).
+        """Summarize this support ticket conversation in 1-2 short sentences.
+
+Your summary MUST include:
+1. What the original issue was
+2. Any troubleshooting steps that were tried (even ones that didn't work)
+3. The current state (resolved, still being worked on, waiting on customer, etc)
 
 IMPORTANT: Only state WHO resolved something or WHAT fixed it if the
 conversation explicitly says so. If the customer just confirms it's working
 now without explaining why, say the customer confirmed it's working —
 do NOT claim the customer resolved it themselves, and do NOT guess who or
 what caused the fix if that isn't stated.
+
+Do NOT oversimplify — if multiple things were tried before it worked,
+mention that a first attempt didn't resolve it, not just the final outcome.
 
 Do not use quotes or restate the ticket subject. Be direct and factual.
 
@@ -373,7 +379,7 @@ Ticket subject: {subject}
 Conversation:
 {conversation}
 
-Output ONLY the one-sentence summary."""
+Output ONLY the 1-2 sentence summary."""
     )
     try:
         result = (summary_prompt | llm).invoke({
