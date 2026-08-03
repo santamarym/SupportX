@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models import User, Ticket, RoleEnum, StatusEnum, TicketTransferRequest as TransferModel, TransferStatusEnum, SLARule, TicketMessage
 from app.schemas import TicketCreate, TicketUpdate, TicketOut, CustomerReplyRequest, TransferRequestCreate, TransferRequestOut, TicketMessageCreate, TicketMessageOut
 from app.sla_utils import assign_sla_deadline, is_breached
-from app.chatbot import classify_ticket_priority, suggest_agent_response
+from app.chatbot import classify_ticket_priority, suggest_agent_response, summarize_conversation
 from app.team_utils import assign_team, assign_agent
 from app.auth import get_current_user, require_role
 
@@ -238,6 +238,24 @@ def mark_notifications_seen(
     })
     db.commit()
     return {"message": "Marked as seen"}
+
+@router.get("/{ticket_id}/summary")
+def get_ticket_summary(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("team_lead")),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if ticket.team_id != current_user.team_id:
+        raise HTTPException(status_code=403, detail="You can only view tickets from your own team")
+
+    messages = db.query(TicketMessage).filter(TicketMessage.ticket_id == ticket_id).order_by(TicketMessage.created_at).all()
+    conversation = "\n".join(f"{m.sender_role}: {m.message}" for m in messages)
+
+    summary = summarize_conversation(ticket.subject, conversation)
+    return {"summary": summary}
 
 
 @router.get("/{ticket_id}/suggest-response")

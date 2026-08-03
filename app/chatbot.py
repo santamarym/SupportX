@@ -348,3 +348,32 @@ Output ONLY the short reply text, nothing else."""
     except Exception as e:
         print(f"Suggestion error: {e}")
         return "Could not generate a suggestion right now — please write a response manually."
+
+def summarize_conversation(ticket_subject: str, conversation: str) -> str:
+    """Generates a short summary of a ticket's back-and-forth conversation,
+    for Team Leads reviewing many tickets without reading full threads."""
+    if not conversation or conversation.strip() == "":
+        return "No conversation yet."
+
+    summary_prompt = ChatPromptTemplate.from_template(
+        """Summarize this support ticket conversation in ONE short sentence,
+covering what the issue was and its current state (resolved, still being
+worked on, waiting on customer, etc). Do not use quotes or restate the
+ticket subject. Be direct and factual.
+
+Ticket subject: {subject}
+
+Conversation:
+{conversation}
+
+Output ONLY the one-sentence summary."""
+    )
+    try:
+        result = (summary_prompt | llm).invoke({
+            "subject": ticket_subject,
+            "conversation": conversation,
+        })
+        return _extract_text(result.content).strip()
+    except Exception as e:
+        print(f"Summary error: {e}")
+        return "Could not generate a summary right now."
