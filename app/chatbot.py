@@ -356,30 +356,31 @@ def summarize_conversation(ticket_subject: str, conversation: str) -> str:
         return "No conversation yet."
 
     summary_prompt = ChatPromptTemplate.from_template(
-        """Summarize this support ticket conversation in 1-2 short sentences.
+        """Summarize this support ticket conversation using this EXACT structure:
 
-Your summary MUST include:
-1. What the original issue was
-2. Any troubleshooting steps that were tried (even ones that didn't work)
-3. The current state (resolved, still being worked on, waiting on customer, etc)
+"[Issue]. [Agent] first suggested [first troubleshooting step], which [did/did not] resolve it. [What happened next / final outcome]."
 
-IMPORTANT: Only state WHO resolved something or WHAT fixed it if the
-conversation explicitly says so. If the customer just confirms it's working
-now without explaining why, say the customer confirmed it's working —
-do NOT claim the customer resolved it themselves, and do NOT guess who or
-what caused the fix if that isn't stated.
-
-Do NOT oversimplify — if multiple things were tried before it worked,
-mention that a first attempt didn't resolve it, not just the final outcome.
-
-Do not use quotes or restate the ticket subject. Be direct and factual.
+RULES:
+- You MUST name at least one specific thing that was tried, even if it didn't work
+- Only state WHO resolved something or WHAT fixed it if the conversation
+  explicitly says so — if the customer just says it's working now without
+  explaining why, say that, don't invent a cause
+- CAREFULLY check whether the LAST message in the conversation is a final,
+  conclusive answer (like "no need to do that", "it works now", "please
+  cancel that request") — if so, the conversation has CONCLUDED, do not
+  say it is "waiting on the customer" or "pending" when the customer has
+  already given their final answer
+- Only say "waiting on customer" if the LAST message was from the agent
+  asking a question that hasn't been answered yet
+- Do not use quotes or restate the ticket subject
+- Maximum 2 sentences
 
 Ticket subject: {subject}
 
 Conversation:
 {conversation}
 
-Output ONLY the 1-2 sentence summary."""
+Output ONLY the summary following the structure above."""
     )
     try:
         result = (summary_prompt | llm).invoke({
