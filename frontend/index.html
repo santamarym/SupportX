@@ -718,9 +718,12 @@ function renderMessageThreadHTML(messages, ticketStatus) {
     const isAgent = m.sender_role === 'agent';
     const bg = isAgent ? 'bg-teal-50 border-teal-200 text-teal-700' : 'bg-slate-50 border-slate-200 text-slate-700';
     const label = isAgent ? `${escapeHtml(m.sender_name || 'Support')}` : `${escapeHtml(m.sender_name || 'Customer')}`;
-    return `<div class="p-2.5 border rounded-lg text-sm ${bg} mb-2">
-      <span class="font-medium block mb-0.5">${label}</span>
-      <span class="whitespace-pre-line">${escapeHtml(m.message)}</span>
+    const alignment = isAgent ? 'items-start' : 'items-end';
+    return `<div class="flex flex-col ${alignment} mb-2">
+      <div class="p-2.5 border rounded-lg text-sm ${bg} max-w-[85%]">
+        <span class="font-medium block mb-0.5">${label}</span>
+        <span class="whitespace-pre-line">${escapeHtml(m.message)}</span>
+      </div>
     </div>`;
   }).join('');
 }
