@@ -99,7 +99,10 @@ Rules:
     ago, like "I cancelled 10 days ago and never got my refund"), treat it
     as a NEW issue — do not assume a ticket already exists. Either answer
     from the KB, or call create_support_ticket. Never ask "what's your
-    ticket number" for a problem being described for the first time.
+    ticket number" for a problem being described for the first time. If
+    the customer references a PAST ticket vaguely, use list_my_tickets
+    first to check what they have — only ask for a specific number if
+    that doesn't clarify which ticket they mean.
 5. If the customer expresses frustration, anger, or strong dissatisfaction,
    acknowledge it briefly and genuinely (e.g. "I understand that's
    frustrating, I'm sorry") before helping or escalating — do not just
@@ -117,6 +120,13 @@ Rules:
 7. Keep answers focused — don't dump unrelated topics when asked a vague
    follow-up like "any other tips"; ask what they're interested in instead.
 8. Never reveal internal ticket priority levels to the customer directly.
+9. BE CONCISE — this is critical. Maximum 2 short sentences total, each
+   under 20 words. Do not combine multiple ideas into one long sentence
+   with commas — pick the SINGLE most useful next step and state it
+   plainly. Never offer the customer a choice between two options. If the
+   customer vaguely references a past issue, try list_my_tickets first
+   rather than immediately asking for a ticket number — only ask for the
+   number if list_my_tickets doesn't make it clear which one they mean.
 """
 
 
@@ -154,12 +164,14 @@ def _build_tools(customer_id: int, db: Session):
     def create_support_ticket(subject: str, description: str, priority: str) -> str:
         if priority not in ["P1", "P2", "P3", "P4"]:
             priority = "P3"
+        sentiment = classify_sentiment(subject, description)
         team_id = assign_team(db)
         ticket = Ticket(
             subject=subject,
             description=description,
             customer_id=customer_id,
             priority=priority,
+            sentiment=sentiment,
             team_id=team_id,
             agent_id=assign_agent(db, team_id),
         )
@@ -393,3 +405,28 @@ Output ONLY the 1-2 sentence summary."""
     except Exception as e:
         print(f"Summary error: {e}")
         return "Could not generate a summary right now."
+
+def classify_sentiment(subject: str, description: str) -> str:
+    """Detects customer tone/urgency signals separate from technical
+    priority — a flag for humans to notice, never used to auto-change
+    SLA deadlines or priority."""
+    sentiment_prompt = ChatPromptTemplate.from_template(
+        """Read this customer support ticket and classify the customer's
+tone. Choose exactly ONE of these labels:
+
+- frustrated: customer expresses clear annoyance, anger, or repeated complaints
+- urgent: customer expresses time pressure or business impact, even if calm
+- neutral: normal, calm tone, no strong emotion
+
+Ticket subject: {subject}
+Ticket description: {description}
+
+Respond with ONLY one word: frustrated, urgent, or neutral."""
+    )
+    try:
+        result = (sentiment_prompt | llm).invoke({"subject": subject, "description": description})
+        text = _extract_text(result.content).strip().lower()
+        return text if text in ["frustrated", "urgent", "neutral"] else "neutral"
+    except Exception as e:
+        print(f"Sentiment error: {e}")
+        return "neutral"

@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models import User, Ticket, RoleEnum, StatusEnum, TicketTransferRequest as TransferModel, TransferStatusEnum, SLARule, TicketMessage
 from app.schemas import TicketCreate, TicketUpdate, TicketOut, CustomerReplyRequest, TransferRequestCreate, TransferRequestOut, TicketMessageCreate, TicketMessageOut
 from app.sla_utils import assign_sla_deadline, is_breached
-from app.chatbot import classify_ticket_priority, suggest_agent_response, summarize_conversation
+from app.chatbot import classify_ticket_priority, suggest_agent_response, summarize_conversation, classify_sentiment
 from app.team_utils import assign_team, assign_agent
 from app.auth import get_current_user, require_role
 
@@ -20,12 +20,14 @@ def create_ticket(
     current_user: User = Depends(require_role("customer")),
 ):
     priority = classify_ticket_priority(payload.subject, payload.description)
+    sentiment = classify_sentiment(payload.subject, payload.description)
     team_id = assign_team(db)
     ticket = Ticket(
         subject=payload.subject,
         description=payload.description,
         customer_id=current_user.id,
         priority=priority,
+        sentiment=sentiment,
         team_id=team_id,
         agent_id=assign_agent(db, team_id),
     )

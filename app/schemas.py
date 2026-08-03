@@ -58,6 +58,7 @@ class TicketOut(BaseModel):
     description: str
     status: StatusEnum
     priority: PriorityEnum
+    sentiment: str | None = None
     customer_id: int
     customer_name: str | None = None
     agent_id: int | None
