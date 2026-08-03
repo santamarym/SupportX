@@ -358,8 +358,15 @@ def summarize_conversation(ticket_subject: str, conversation: str) -> str:
     summary_prompt = ChatPromptTemplate.from_template(
         """Summarize this support ticket conversation in ONE short sentence,
 covering what the issue was and its current state (resolved, still being
-worked on, waiting on customer, etc). Do not use quotes or restate the
-ticket subject. Be direct and factual.
+worked on, waiting on customer, etc).
+
+IMPORTANT: Only state WHO resolved something or WHAT fixed it if the
+conversation explicitly says so. If the customer just confirms it's working
+now without explaining why, say the customer confirmed it's working —
+do NOT claim the customer resolved it themselves, and do NOT guess who or
+what caused the fix if that isn't stated.
+
+Do not use quotes or restate the ticket subject. Be direct and factual.
 
 Ticket subject: {subject}
 
