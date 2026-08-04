@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.config import GEMINI_API_KEY
 from app.kb_data import KB_ARTICLES
-from app.models import Ticket
+from app.models import Ticket, StatusEnum
 from app.sla_utils import assign_sla_deadline
 from app.team_utils import assign_team, assign_agent
 
@@ -130,6 +130,10 @@ Rules:
    response (offering to check tickets, giving alternatives, etc.) can
    still be a full sentence if needed — the goal is trimming the
    emotional opener, not removing useful options.
+10. If the customer confirms they're referring to an existing ticket you
+    identified, AND they expressed frustration, call escalate_existing_ticket
+    with that ticket's ID. Let them know it's been flagged for priority
+    attention in your reply.
 """
 
 
@@ -142,6 +146,8 @@ class CreateTicketInput(BaseModel):
     description: str = Field(description="Full description of the customer's issue")
     priority: str = Field(description="One of: P1, P2, P3, P4")
 
+class EscalateTicketInput(BaseModel):
+    ticket_id: int = Field(description="The ID of the existing ticket to escalate")
 
 def _build_tools(customer_id: int, db: Session):
     def check_ticket_status(ticket_id: int) -> str:
@@ -185,6 +191,19 @@ def _build_tools(customer_id: int, db: Session):
         db.refresh(ticket)
         return f"TICKET_CREATED:{ticket.id}:Created ticket #{ticket.id}. An agent will follow up shortly."
 
+    def escalate_existing_ticket(ticket_id: int) -> str:
+        ticket = db.query(Ticket).filter(
+            Ticket.id == ticket_id, Ticket.customer_id == customer_id
+        ).first()
+        if not ticket:
+            return f"No ticket #{ticket_id} found for this customer."
+        ticket.sentiment = "frustrated"
+        if ticket.status != StatusEnum.resolved:
+            ticket.status = StatusEnum.escalated
+        db.commit()
+        return f"Ticket #{ticket_id} has been flagged as frustrated and escalated for priority attention."
+
+    
     status_tool = StructuredTool.from_function(
         func=check_ticket_status,
         name="check_ticket_status",
@@ -202,7 +221,13 @@ def _build_tools(customer_id: int, db: Session):
         description="Create a new support ticket for a genuinely new issue not covered by the KB.",
         args_schema=CreateTicketInput,
     )
-    return [status_tool, list_tool, create_tool]
+    escalate_tool = StructuredTool.from_function(
+        func=escalate_existing_ticket,
+        name="escalate_existing_ticket",
+        description="Use when the customer confirms they're referring to an existing ticket and expresses frustration about it. Flags that ticket as frustrated and escalates it for priority handling.",
+        args_schema=EscalateTicketInput,
+    )
+    return [status_tool, list_tool, create_tool, escalate_tool]
 
 
 llm = ChatGoogleGenerativeAI(
