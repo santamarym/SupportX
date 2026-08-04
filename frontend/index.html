@@ -729,7 +729,7 @@ function ticketRow(t, showCustomer, internal = true) {
     <div class="px-4 py-3 border-b border-slate-100 last:border-0">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-slate-800">${escapeHtml(t.subject)}</p>
+          <p class="text-sm font-medium text-slate-800">${escapeHtml(t.subject)}${sentimentBadge(t)}</p>
           <p class="text-xs text-slate-400 mt-0.5">#${t.id}${internalDetails}</p>
           <p class="text-sm text-slate-500 mt-1">${escapeHtml(t.description)}</p>
           ${internal ? slaBadge(t) : ''}
@@ -768,6 +768,16 @@ async function loadThreadIfAny(ticketId, containerId) {
   } catch {
     // Silently ignore — don't clutter the UI with an error for this
   }
+}
+
+function sentimentBadge(t) {
+  if (!t.sentiment || t.sentiment === 'neutral') return '';
+  const styles = {
+    frustrated: 'bg-red-50 text-red-700 border-red-200',
+    urgent: 'bg-amber-50 text-amber-700 border-amber-200',
+  };
+  const icons = { frustrated: '🚩', urgent: '⚡' };
+  return `<span class="text-xs font-medium px-2 py-0.5 rounded-full border ${styles[t.sentiment] || ''} ml-2">${icons[t.sentiment] || ''} ${t.sentiment}</span>`;
 }
 
 function escapeHtml(str) {
@@ -1029,6 +1039,15 @@ async function renderTeamTickets() {
                   <option value="">All</option>
                   <option value="open">Open</option><option value="in_progress">In progress</option>
                   <option value="escalated">Escalated</option><option value="resolved">Resolved</option>
+                </select>
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap" style="width: 110px;">
+                <div class="mb-1.5">Sentiment</div>
+                <select id="fSentiment" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
+                  <option value="">All</option>
+                  <option value="frustrated">Frustrated</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="neutral">Neutral</option>
                 </select>
               </th>
               <th class="px-3 py-2 align-top whitespace-nowrap" style="width: 110px;">
