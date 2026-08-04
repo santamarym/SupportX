@@ -1623,6 +1623,7 @@ function renderFilteredTeamTickets() {
   const fPriority = document.getElementById('fPriority').value;
   const fSla = document.getElementById('fSla').value;
   const fStatus = document.getElementById('fStatus').value;
+  const fSentiment = document.getElementById('fSentiment').value;
   const fTransfer = document.getElementById('fTransfer').value;
 
   const filtered = _teamTicketsData.filter(t => {
@@ -1639,6 +1640,7 @@ function renderFilteredTeamTickets() {
     if (fSla === 'breached' && !sla.breached) return false;
     if (fSla === 'remaining' && sla.breached) return false;
     if (fStatus && t.status !== fStatus) return false;
+    if (fSentiment && t.sentiment !== fSentiment) return false;
     return true;
   });
 
@@ -1659,6 +1661,7 @@ function renderFilteredTeamTickets() {
       <td class="px-4 py-2.5">${t.priority}</td>
       <td class="px-4 py-2.5 ${sla.breached ? 'text-red-600 font-medium' : 'text-slate-500'}">${sla.breached ? '⚠ ' : ''}${sla.text}</td>
       <td class="px-4 py-2.5"><span class="text-xs font-medium px-2 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span></td>
+      <td class="px-4 py-2.5">${sentimentBadge(t) || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-4 py-2.5">
         <button onclick="showConversationModal(${t.id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Conversation</button>
       </td>
