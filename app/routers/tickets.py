@@ -62,11 +62,24 @@ def list_escalations(
     current_user: User = Depends(require_role("team_lead", "admin")),
 ):
     """Returns unresolved tickets that have breached their SLA deadline.
-    Team Lead sees only their team's breaches; Admin sees all."""
-    query = db.query(Ticket).filter(
-        Ticket.status != StatusEnum.resolved,
+    Team Lead sees only their team's breaches; Admin sees all.
+
+    Also marks any newly-breached tickets with status='escalated' — this
+    makes the escalation real and persistent (visible in the Agent's queue
+    and everywhere else too), not just a filtered view on this one page."""
+    breached_query = db.query(Ticket).filter(
+        Ticket.status.notin_([StatusEnum.resolved, StatusEnum.escalated]),
         Ticket.sla_deadline.isnot(None),
         Ticket.sla_deadline < datetime.utcnow(),
+    )
+    newly_breached = breached_query.all()
+    for ticket in newly_breached:
+        ticket.status = StatusEnum.escalated
+    if newly_breached:
+        db.commit()
+
+    query = db.query(Ticket).filter(
+        Ticket.status == StatusEnum.escalated,
     )
     if current_user.role == RoleEnum.team_lead:
         query = query.filter(Ticket.team_id == current_user.team_id)
