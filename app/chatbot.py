@@ -457,18 +457,33 @@ Output ONLY the 1-2 sentence summary."""
     except Exception as e:
         print(f"Summary error: {e}")
         return "Could not generate a summary right now."
-
+    
 def classify_sentiment(subject: str, description: str) -> str:
     """Detects customer tone/urgency signals separate from technical
     priority — a flag for humans to notice, never used to auto-change
     SLA deadlines or priority."""
     sentiment_prompt = ChatPromptTemplate.from_template(
         """Read this customer support ticket and classify the customer's
-tone. Choose exactly ONE of these labels:
+tone. Choose exactly ONE of these labels: frustrated, urgent, or neutral.
 
-- frustrated: customer expresses clear annoyance, anger, or repeated complaints
-- urgent: customer expresses time pressure or business impact, even if calm
-- neutral: normal, calm tone, no strong emotion
+EXAMPLES:
+
+"This is absolutely ridiculous, still doesn't work" → frustrated
+"It is so tiresome having to update this again and again, not working" → frustrated
+"I keep having to redo this every time" → frustrated
+"Third time dealing with this same issue" → frustrated
+"Need this fixed before my meeting in 30 minutes" → urgent
+"We have a client demo in an hour" → urgent
+"Can you tell me how to update my billing address" → neutral
+"The export button doesn't work" → neutral
+
+RULES:
+- Repeated attempts, words like "again", "still", "tiresome", "keep
+  having to", or any sign of accumulated annoyance from something not
+  working after multiple tries = frustrated, even without strong words
+  like "angry" or "unacceptable"
+- Time pressure or deadlines mentioned = urgent, even if the tone is calm
+- Otherwise = neutral
 
 Ticket subject: {subject}
 Ticket description: {description}
