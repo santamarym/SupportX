@@ -12,13 +12,14 @@
 """
 import math
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.config import GEMINI_API_KEY
+from app.config import GEMINI_API_KEY, SENDGRID_API_KEY, SENDGRID_FROM_EMAIL, GROQ_API_KEY
 from app.kb_data import KB_ARTICLES
 from app.models import Ticket, StatusEnum
 from app.sla_utils import assign_sla_deadline
