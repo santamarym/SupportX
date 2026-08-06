@@ -65,7 +65,7 @@ class Ticket(Base):
     description = Column(Text, nullable=False)
     status = Column(Enum(StatusEnum), default=StatusEnum.open)
     priority = Column(Enum(PriorityEnum), default=PriorityEnum.P3)
-
+    sentiment = Column(String, default="neutral")
     customer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     agent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     team_id = Column(Integer, nullable=True)
