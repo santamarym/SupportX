@@ -771,13 +771,13 @@ async function loadThreadIfAny(ticketId, containerId) {
 }
 
 function sentimentBadge(t) {
-  if (!t.sentiment || t.sentiment === 'neutral') return '';
+  if (!t.sentiment) return '';
   const styles = {
-    frustrated: 'bg-red-50 text-red-700 border-red-200',
-    urgent: 'bg-amber-50 text-amber-700 border-amber-200',
+    urgent: 'bg-red-50 text-red-700 border-red-200',
+    frustrated: 'bg-amber-50 text-amber-700 border-amber-200',
+    neutral: 'bg-slate-50 text-slate-500 border-slate-200',
   };
-  const icons = { frustrated: '🚩', urgent: '⚡' };
-  return `<span class="text-xs font-medium px-2 py-0.5 rounded-full border ${styles[t.sentiment] || ''} ml-2">${icons[t.sentiment] || ''} ${t.sentiment}</span>`;
+  return `<span class="text-xs font-medium px-2 py-0.5 rounded-full border ${styles[t.sentiment] || ''} ml-2 capitalize">${t.sentiment}</span>`;
 }
 
 function escapeHtml(str) {
@@ -1661,7 +1661,7 @@ function renderFilteredTeamTickets() {
       <td class="px-4 py-2.5">${t.priority}</td>
       <td class="px-4 py-2.5 ${sla.breached ? 'text-red-600 font-medium' : 'text-slate-500'}">${sla.breached ? '⚠ ' : ''}${sla.text}</td>
       <td class="px-4 py-2.5"><span class="text-xs font-medium px-2 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span></td>
-      <td class="px-4 py-2.5">${sentimentBadge(t) || '<span class="text-slate-300">—</span>'}</td>
+      <td class="px-4 py-2.5">${sentimentBadge(t)}</td>
       <td class="px-4 py-2.5">
         <button onclick="showConversationModal(${t.id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Conversation</button>
       </td>
