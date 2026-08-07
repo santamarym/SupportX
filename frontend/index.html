@@ -729,7 +729,7 @@ function ticketRow(t, showCustomer, internal = true) {
     <div class="px-4 py-3 border-b border-slate-100 last:border-0">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-slate-800">${escapeHtml(t.subject)}${sentimentBadge(t)}</p>
+          <p class="text-sm font-medium text-slate-800">${escapeHtml(t.subject)}${internal ? sentimentBadge(t) : ''}</p>
           <p class="text-xs text-slate-400 mt-0.5">#${t.id}${internalDetails}</p>
           <p class="text-sm text-slate-500 mt-1">${escapeHtml(t.description)}</p>
           ${internal ? slaBadge(t) : ''}
