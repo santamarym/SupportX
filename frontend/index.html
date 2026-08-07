@@ -725,6 +725,7 @@ function ticketRow(t, showCustomer, internal = true) {
   const internalDetails = internal
     ? ` · ${t.priority}${showCustomer ? ' · Customer #' + t.customer_id : ''}`
     : '';
+  const displayStatus = (!internal && t.status === 'escalated') ? 'open' : t.status;
   return `
     <div class="px-4 py-3 border-b border-slate-100 last:border-0">
       <div class="flex items-center justify-between">
@@ -734,7 +735,7 @@ function ticketRow(t, showCustomer, internal = true) {
           <p class="text-sm text-slate-500 mt-1">${escapeHtml(t.description)}</p>
           ${internal ? slaBadge(t) : ''}
         </div>
-        <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span>
+        <span class="text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_STYLES[displayStatus] || STATUS_STYLES.open} capitalize whitespace-nowrap inline-block">${displayStatus.replace('_',' ')}</span>
       </div>
     </div>`;
 }
