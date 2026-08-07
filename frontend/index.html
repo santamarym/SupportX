@@ -1775,7 +1775,7 @@ function renderSortedEscalations() {
       </td>
       <td class="px-3 py-2.5">${t.priority}</td>
       <td class="px-3 py-2.5 text-slate-500">${escapeHtml(t.agent_name || '—')}</td>
-      <td class="px-3 py-2.5 text-red-600 font-medium">⚠ ${_overdueText(t.overdueMinutes)}</td>
+      <td class="px-3 py-2.5 text-red-600 font-medium">${t.overdueMinutes < 0 ? '⚠ Escalated by customer priority' : '⚠ ' + _overdueText(t.overdueMinutes)}</td>
       <td class="px-3 py-2.5 text-slate-500">${new Date(t.created_at.endsWith('Z') ? t.created_at : t.created_at + 'Z').toLocaleString()}</td>
     </tr>
   `).join('');
