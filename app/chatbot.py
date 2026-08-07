@@ -220,16 +220,16 @@ def _build_tools(customer_id: int, db: Session):
         return f"TICKET_CREATED:{ticket.id}:Created ticket #{ticket.id}. An agent will follow up shortly."
 
     def escalate_existing_ticket(ticket_id: int) -> str:
-        ticket = db.query(Ticket).filter(
-            Ticket.id == ticket_id, Ticket.customer_id == customer_id
-        ).first()
-        if not ticket:
-            return f"No ticket #{ticket_id} found for this customer."
-        ticket.sentiment = "frustrated"
-        if ticket.status != StatusEnum.resolved:
-            ticket.status = StatusEnum.escalated
-        db.commit()
-        return f"Ticket #{ticket_id} has been flagged as frustrated and escalated for priority attention."
+     ticket = db.query(Ticket).filter(
+        Ticket.id == ticket_id, Ticket.customer_id == customer_id
+     ).first()
+     if not ticket:
+        return f"No ticket #{ticket_id} found for this customer."
+     ticket.sentiment = "frustrated"
+     if ticket.status != StatusEnum.resolved:
+        ticket.status = StatusEnum.escalated
+     db.commit()
+     return f"Ticket #{ticket_id} has been escalated for priority attention. Someone from our team will follow up shortly."
 
     
     status_tool = StructuredTool.from_function(
