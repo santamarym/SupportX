@@ -164,6 +164,14 @@ def get_dashboard_stats(
         day: round(sum(mins) / len(mins), 1) for day, mins in sorted(response_by_day.items())
     }
 
+    agent_ids = set(t.agent_id for t in all_tickets if t.agent_id and t.status != StatusEnum.resolved)
+    agents_by_id = {a.id: a.name for a in db.query(User).filter(User.id.in_(agent_ids)).all()} if agent_ids else {}
+    workload_by_agent = {}
+    for t in all_tickets:
+        if t.agent_id and t.status != StatusEnum.resolved:
+            name = agents_by_id.get(t.agent_id, f"Agent {t.agent_id}")
+            workload_by_agent[name] = workload_by_agent.get(name, 0) + 1
+
     return {
         "total_tickets": total,
         "open_tickets": open_count,
@@ -174,6 +182,7 @@ def get_dashboard_stats(
         "status_counts": status_counts,
         "avg_resolution_hours_by_day": avg_resolution_by_day,
         "avg_response_minutes_by_day": avg_response_by_day,
+        "workload_by_agent": workload_by_agent,
     }
 
 @router.get("/admin/sla-rules")

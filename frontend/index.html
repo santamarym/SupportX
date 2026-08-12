@@ -1208,6 +1208,10 @@ async function renderDashboard() {
           <h3 class="text-sm font-semibold text-slate-800 mb-3">Average Response Time by Day (minutes)</h3>
           <div style="height: 220px;"><canvas id="responseChart"></canvas></div>
         </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-5 md:col-span-2">
+          <h3 class="text-sm font-semibold text-slate-800 mb-3">Active Tickets by Agent</h3>
+          <div style="height: 220px;"><canvas id="workloadChart"></canvas></div>
+        </div>
       </div>
     `;
 
@@ -1258,6 +1262,23 @@ async function renderDashboard() {
     });
     if (responseDays.length === 0) {
       document.getElementById('responseChart').insertAdjacentHTML('afterend', '<p class="text-xs text-slate-400 mt-2">No agent responses recorded yet — this data starts populating once agents send replies.</p>');
+    }
+
+    const workloadLabels = Object.keys(stats.workload_by_agent);
+    new Chart(document.getElementById('workloadChart'), {
+      type: 'bar',
+      data: {
+        labels: workloadLabels,
+        datasets: [{
+          label: 'Active tickets',
+          data: Object.values(stats.workload_by_agent),
+          backgroundColor: '#0D9488',
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+    if (workloadLabels.length === 0) {
+      document.getElementById('workloadChart').insertAdjacentHTML('afterend', '<p class="text-xs text-slate-400 mt-2">No agents currently have active tickets.</p>');
     }
 
   } catch (err) {
@@ -1718,13 +1739,13 @@ function renderFilteredTeamTickets() {
       <td class="px-4 py-2.5 ${sla.breached ? 'text-red-600 font-medium' : 'text-slate-500'}">${sla.breached ? '⚠ ' : ''}${sla.text}</td>
       <td class="px-4 py-2.5"><span class="text-xs font-medium px-2 py-1 rounded-full border ${statusClass} capitalize whitespace-nowrap inline-block">${t.status.replace('_',' ')}</span></td>
       <td class="px-4 py-2.5">${sentimentBadge(t)}</td>
-      <td class="px-4 py-2.5">
+      <td class="px-3 py-2.5">
         <button onclick="showConversationModal(${t.id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Conversation</button>
       </td>
-      <td class="px-2 py-2.5">
+      <td class="px-3 py-2.5">
          ${t.status !== 'resolved' ? `<button onclick="openReassignModal(${t.id}, ${t.team_id}, ${t.agent_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Reassign</button>` : ''}
       </td>
-      <td class="px-4 py-2.5">
+      <td class="px-3 py-2.5">
         ${_pendingTransferTicketIds.has(t.id)
           ? `<span class="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 whitespace-nowrap inline-block">Request sent</span>`
           : (t.status !== 'resolved' ? `<button onclick="transferTicket(${t.id}, ${t.team_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Transfer</button>` : '')}
