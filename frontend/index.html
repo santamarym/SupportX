@@ -224,6 +224,19 @@
   </div>
 </div>
 
+<div id="reassignModal" class="hidden fixed inset-0 bg-black/40 z-[60] flex items-center justify-center px-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+    <h3 class="font-semibold text-slate-800 mb-3">Reassign ticket</h3>
+    <select id="reassignAgentSelect" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg mb-4">
+      <option value="">Loading agents...</option>
+    </select>
+    <div class="flex gap-3 justify-end">
+      <button onclick="closeReassignModal()" class="text-sm px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Cancel</button>
+      <button onclick="confirmReassign()" class="text-sm px-4 py-2 rounded-lg bg-accent text-white hover:bg-teal-700">Reassign</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ FLOATING CHAT BUTTON (Customer only) ============ -->
 <div id="chatBubbleWrap" class="hidden fixed bottom-6 right-6 z-40">
   <button id="chatBubble" onclick="toggleChatPopup()" class="w-14 h-14 rounded-full bg-accent hover:bg-teal-700 text-white shadow-lg flex items-center justify-center text-2xl transition" style="animation: chatFloat 2.5s ease-in-out infinite;">
@@ -505,6 +518,38 @@ async function showConversationModal(ticketId) {
 function closeThreadModal() {
   document.getElementById('threadModal').classList.add('hidden');
   _currentModalTicketId = null;
+}
+
+let _reassignTicketId = null;
+
+async function openReassignModal(ticketId, teamId) {
+  _reassignTicketId = ticketId;
+  document.getElementById('reassignModal').classList.remove('hidden');
+  const select = document.getElementById('reassignAgentSelect');
+  select.innerHTML = '<option value="">Loading agents...</option>';
+  try {
+    const agents = await apiGet(`/tickets/team-agents/${teamId}`);
+    select.innerHTML = agents.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+  } catch {
+    select.innerHTML = '<option value="">Could not load agents</option>';
+  }
+}
+
+function closeReassignModal() {
+  document.getElementById('reassignModal').classList.add('hidden');
+  _reassignTicketId = null;
+}
+
+async function confirmReassign() {
+  const agentId = document.getElementById('reassignAgentSelect').value;
+  if (!agentId) return;
+  try {
+    await apiPatch(`/tickets/${_reassignTicketId}`, { agent_id: parseInt(agentId) });
+    closeReassignModal();
+    renderTeamTickets();
+  } catch (err) {
+    alert('Could not reassign: ' + err.message);
+  }
 }
 
 async function generateSummary() {
@@ -1062,6 +1107,9 @@ async function renderTeamTickets() {
                 <div class="mb-1.5">Conversation</div>
               </th>
               <th class="px-3 py-2 align-top whitespace-nowrap" style="width: 110px;">
+                <div class="mb-1.5">Reassign</div>
+              </th>
+              <th class="px-3 py-2 align-top whitespace-nowrap" style="width: 110px;">
                 <div class="mb-1.5">Transfer</div>
                 <select id="fTransfer" class="w-full text-xs font-normal normal-case px-2 py-1 border border-slate-300 rounded-md">
                   <option value="">All</option>
@@ -1092,7 +1140,7 @@ async function renderTeamTickets() {
     }
     renderFilteredTeamTickets();
   } catch {
-    tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-4 text-red-500">Could not load tickets.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="px-4 py-4 text-red-500">Could not load tickets.</td></tr>`;
   }
 }
 
@@ -1674,12 +1722,15 @@ function renderFilteredTeamTickets() {
         <button onclick="showConversationModal(${t.id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Conversation</button>
       </td>
       <td class="px-4 py-2.5">
+        ${t.status !== 'resolved' ? `<button onclick="openReassignModal(${t.id}, ${t.team_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Reassign</button>` : ''}
+      </td>
+      <td class="px-4 py-2.5">
         ${_pendingTransferTicketIds.has(t.id)
           ? `<span class="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 whitespace-nowrap inline-block">Request sent</span>`
           : (t.status !== 'resolved' ? `<button onclick="transferTicket(${t.id}, ${t.team_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Transfer</button>` : '')}
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="10" class="px-4 py-6 text-center text-slate-400">No tickets match these filters.</td></tr>`;
+  }).join('') : `<tr><td colspan="11" class="px-4 py-6 text-center text-slate-400">No tickets match these filters.</td></tr>`;
 }
 
 // ---------- Team Lead: Escalations (SLA-breached tickets) ----------

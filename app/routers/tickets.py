@@ -456,6 +456,17 @@ def add_customer_message(
     db.refresh(msg)
     return msg
 
+@router.get("/team-agents/{team_id}")
+def list_team_agents(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("team_lead", "admin")),
+):
+    """Lets Team Lead see which agents are on a team, for manual reassignment."""
+    agents = db.query(User).filter(User.role == RoleEnum.agent, User.team_id == team_id).all()
+    return [{"id": a.id, "name": a.name} for a in agents]
+
+
 @router.get("/{ticket_id}", response_model=TicketOut)
 def get_ticket(
     ticket_id: int,
