@@ -459,11 +459,17 @@ def add_customer_message(
 @router.get("/team-agents/{team_id}")
 def list_team_agents(
     team_id: int,
+    exclude_agent_id: int = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("team_lead", "admin")),
 ):
-    """Lets Team Lead see which agents are on a team, for manual reassignment."""
-    agents = db.query(User).filter(User.role == RoleEnum.agent, User.team_id == team_id).all()
+    """Lets Team Lead see which agents are on a team, for manual reassignment.
+    Optionally excludes the currently assigned agent, since reassigning to
+    the same person doesn't make sense."""
+    query = db.query(User).filter(User.role == RoleEnum.agent, User.team_id == team_id)
+    if exclude_agent_id is not None:
+        query = query.filter(User.id != exclude_agent_id)
+    agents = query.all()
     return [{"id": a.id, "name": a.name} for a in agents]
 
 

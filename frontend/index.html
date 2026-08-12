@@ -522,13 +522,13 @@ function closeThreadModal() {
 
 let _reassignTicketId = null;
 
-async function openReassignModal(ticketId, teamId) {
+async function openReassignModal(ticketId, teamId, currentAgentId) {
   _reassignTicketId = ticketId;
   document.getElementById('reassignModal').classList.remove('hidden');
   const select = document.getElementById('reassignAgentSelect');
   select.innerHTML = '<option value="">Loading agents...</option>';
   try {
-    const agents = await apiGet(`/tickets/team-agents/${teamId}`);
+    const agents = await apiGet(`/tickets/team-agents/${teamId}?exclude_agent_id=${currentAgentId || ''}`);
     select.innerHTML = agents.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
   } catch {
     select.innerHTML = '<option value="">Could not load agents</option>';
@@ -1721,8 +1721,8 @@ function renderFilteredTeamTickets() {
       <td class="px-4 py-2.5">
         <button onclick="showConversationModal(${t.id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Conversation</button>
       </td>
-      <td class="px-4 py-2.5">
-        ${t.status !== 'resolved' ? `<button onclick="openReassignModal(${t.id}, ${t.team_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Reassign</button>` : ''}
+      <td class="px-2 py-2.5">
+         ${t.status !== 'resolved' ? `<button onclick="openReassignModal(${t.id}, ${t.team_id}, ${t.agent_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Reassign</button>` : ''}
       </td>
       <td class="px-4 py-2.5">
         ${_pendingTransferTicketIds.has(t.id)
