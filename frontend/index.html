@@ -1753,7 +1753,7 @@ function renderFilteredTeamTickets() {
         <button onclick="showConversationModal(${t.id})" class="w-full text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Conversation</button>
       </td>
       <td class="px-3 py-2.5">
-         ${t.status !== 'resolved' ? `<button on<button onclick="openReassignModal(${t.id}, ${t.team_id}, ${t.agent_id})" class="w-full text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Reassign</button>click="openReassignModal(${t.id}, ${t.team_id}, ${t.agent_id})" class="text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Reassign</button>` : ''}
+         ${t.status !== 'resolved' ? `<button onclick="openReassignModal(${t.id}, ${t.team_id}, ${t.agent_id})" class="w-full text-xs px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">Reassign</button>` : ''}
       </td>
       <td class="px-3 py-2.5">
         ${_pendingTransferTicketIds.has(t.id)
