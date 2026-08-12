@@ -1275,8 +1275,18 @@ async function renderDashboard() {
           backgroundColor: '#0D9488',
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-    });
+      options: { 
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            ticks: { stepSize: 1, precision: 0 }
+          }
+          }
+          }
+       });
+  
     if (workloadLabels.length === 0) {
       document.getElementById('workloadChart').insertAdjacentHTML('afterend', '<p class="text-xs text-slate-400 mt-2">No agents currently have active tickets.</p>');
     }
